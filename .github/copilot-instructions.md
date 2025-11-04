@@ -1073,7 +1073,6 @@ const { t } = useTranslation();
 ### **Supported Languages (Roadmap)**
 - English (en-US) ✅ Current
 - Indonesian (id-ID) 🚧 Planned
-- Malay (ms-MY) 🚧 Planned
 
 ---
 

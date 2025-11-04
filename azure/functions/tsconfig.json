@@ -13,16 +13,20 @@
   },
   "include": [
     "index.ts",
-    "handlers/auth-production.ts",
-    "handlers/events-production.ts",
+    "handlers/auth.ts",
+    "handlers/events.ts",
+    "handlers/orders.ts",
+    "handlers/tickets.ts",
     "utils/**/*.ts",
     "prisma.ts"
   ],
   "exclude": [
     "node_modules",
     "dist",
-    "handlers/auth.ts",
-  "handlers/events.ts",
+    "handlers/auth-production.ts",
+    "handlers/events-production.ts",
+    "handlers/orders-production.ts",
+    "handlers/tickets-production.ts",
     "handlers/bookings.ts",
     "handlers/tickets.ts",
     "auth-login.ts"

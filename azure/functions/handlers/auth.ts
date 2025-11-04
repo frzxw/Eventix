@@ -1,189 +1,218 @@
 /**
- * Authentication API Handlers
- * Handles user login and signup
+ * Authentication Handlers - PRODUCTION READY
  */
+import { HttpRequest, HttpResponseInit } from '@azure/functions';
+import prisma from '../prisma';
+import {
+  hashPassword,
+  comparePassword,
+  generateTokenPair,
+  extractTokenFromHeader,
+  verifyAccessToken,
+  verifyRefreshToken,
+  generateVerificationToken,
+  hashToken,
+  validateSessionToken,
+  parseDurationMillis,
+} from '../utils/auth';
 
-import { Context, HttpRequest } from "@azure/functions";
-
-interface ApiResponse<T> {
-  success: boolean;
-  data?: T;
-  error?: string;
-}
-
-interface UserResponse {
-  id: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-}
-
-interface AuthResponse {
-  user: UserResponse;
-  token: string;
-  refreshToken: string;
-  expiresIn: number;
-}
-
-// Mock user database
-const users: Map<string, { id: string; email: string; password: string; firstName: string; lastName: string }> = new Map([
-  [
-    "user@example.com",
-    {
-      id: "user-001",
-      email: "user@example.com",
-      password: "hashedpassword123", // In production: use bcrypt
-      firstName: "John",
-      lastName: "Doe",
-    },
-  ],
-]);
-
-/**
- * Mock JWT generation (replace with real JWT in production)
- */
-function generateToken(userId: string): { token: string; refreshToken: string } {
-  const token = Buffer.from(JSON.stringify({ userId, type: "access", iat: Date.now() })).toString("base64");
-  const refreshToken = Buffer.from(JSON.stringify({ userId, type: "refresh", iat: Date.now() })).toString("base64");
-  return { token, refreshToken };
-}
-
-/**
- * POST /api/auth/login
- * User login endpoint
- * Request body: { email: string; password: string }
- */
-export async function authLogin(context: Context, req: HttpRequest): Promise<void> {
+export async function signupHandler(req: HttpRequest): Promise<HttpResponseInit> {
   try {
-    if (req.method !== "POST") {
-      context.res = { status: 405, body: { success: false, error: "Method not allowed" } };
-      return;
-    }
+    const body = (await req.json()) as any;
+    const { email, password, firstName, lastName, phoneNumber } = body;
 
-    const { email, password } = req.body;
-
-    // Validation
-    if (!email || !password) {
-      context.res = {
-        status: 400,
-        body: { success: false, error: "Email and password are required" },
-      };
-      return;
-    }
-
-    // Find user
-    const user = users.get(email);
-    if (!user || user.password !== password) {
-      context.res = {
-        status: 401,
-        body: { success: false, error: "Invalid email or password" },
-      };
-      return;
-    }
-
-    // Generate tokens
-    const { token, refreshToken } = generateToken(user.id);
-
-    const response: AuthResponse = {
-      user: {
-        id: user.id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-      },
-      token,
-      refreshToken,
-      expiresIn: 900, // 15 minutes
-    };
-
-    context.res = {
-      status: 200,
-      body: { success: true, data: response } as ApiResponse<AuthResponse>,
-    };
-  } catch (error: any) {
-    context.log.error("authLogin error:", error);
-    context.res = {
-      status: 500,
-      body: { success: false, error: "Failed to login" },
-    };
-  }
-}
-
-/**
- * POST /api/auth/signup
- * User registration endpoint
- * Request body: { email: string; password: string; firstName: string; lastName: string }
- */
-export async function authSignup(context: Context, req: HttpRequest): Promise<void> {
-  try {
-    if (req.method !== "POST") {
-      context.res = { status: 405, body: { success: false, error: "Method not allowed" } };
-      return;
-    }
-
-    const { email, password, firstName, lastName } = req.body;
-
-    // Validation
     if (!email || !password || !firstName || !lastName) {
-      context.res = {
-        status: 400,
-        body: { success: false, error: "All fields (email, password, firstName, lastName) are required" },
-      };
-      return;
+      return { status: 400, jsonBody: { success: false, error: 'VALIDATION_ERROR', message: 'Missing required fields: email, password, firstName, lastName' } };
+    }
+    if (password.length < 8) {
+      return { status: 400, jsonBody: { success: false, error: 'WEAK_PASSWORD', message: 'Password must be at least 8 characters long' } };
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return { status: 400, jsonBody: { success: false, error: 'INVALID_EMAIL', message: 'Invalid email format' } };
     }
 
-    // Check if user exists
-    if (users.has(email)) {
-      context.res = {
-        status: 409,
-        body: { success: false, error: "Email already registered" },
-      };
-      return;
+    const existingUser = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
+    if (existingUser) {
+      return { status: 409, jsonBody: { success: false, error: 'USER_EXISTS', message: 'User already exists with this email' } };
     }
 
-    // Create user
-    const userId = `user-${Date.now()}`;
-    const newUser = {
-      id: userId,
-      email,
-      password, // In production: hash with bcrypt
-      firstName,
-      lastName,
-    };
-
-    users.set(email, newUser);
-
-    // Generate tokens
-    const { token, refreshToken } = generateToken(userId);
-
-    const response: AuthResponse = {
-      user: {
-        id: userId,
-        email,
+    const passwordHash = await hashPassword(password);
+    const newUser = await prisma.user.create({
+      data: {
+        email: email.toLowerCase(),
+        passwordHash,
         firstName,
         lastName,
+        phone: phoneNumber || null,
+        emailVerified: false,
       },
-      token,
-      refreshToken,
-      expiresIn: 900,
-    };
+    });
 
-    context.res = {
-      status: 201,
-      body: { success: true, data: response } as ApiResponse<AuthResponse>,
-    };
-  } catch (error: any) {
-    context.log.error("authSignup error:", error);
-    context.res = {
-      status: 500,
-      body: { success: false, error: "Failed to signup" },
-    };
+    const tokenPair = generateTokenPair({ sub: newUser.id, email: newUser.email, firstName: newUser.firstName, lastName: newUser.lastName });
+    const [accessHash, refreshHash] = await Promise.all([hashToken(tokenPair.accessToken), hashToken(tokenPair.refreshToken)]);
+    const refreshExpiryMs = parseDurationMillis(process.env.JWT_REFRESH_EXPIRY || '7d');
+    const sessionExpiresAt = new Date(Date.now() + (refreshExpiryMs || 7 * 24 * 60 * 60 * 1000));
+
+    await prisma.session.create({
+      data: {
+        userId: newUser.id,
+        tokenHash: accessHash,
+        refreshTokenHash: refreshHash,
+        expiresAt: sessionExpiresAt,
+        deviceInfo: req.headers.get('user-agent') || null,
+        ipAddress: req.headers.get('x-forwarded-for') || req.headers.get('client-ip') || null,
+      },
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        userId: newUser.id,
+        action: 'USER_SIGNUP',
+        resourceType: 'USER',
+        resourceId: newUser.id,
+        changes: JSON.stringify({ email: newUser.email }),
+        ipAddress: req.headers.get('x-forwarded-for') || req.headers.get('client-ip') || null,
+        userAgent: req.headers.get('user-agent') || null,
+      },
+    });
+
+    return { status: 201, jsonBody: { success: true, data: { user: { id: newUser.id, email: newUser.email, firstName: newUser.firstName, lastName: newUser.lastName }, accessToken: tokenPair.accessToken, refreshToken: tokenPair.refreshToken }, message: 'User registered successfully' } };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Signup error:', errorMessage);
+    return { status: 500, jsonBody: { success: false, error: 'SIGNUP_FAILED', message: `Signup failed: ${errorMessage}` } };
   }
 }
 
-/**
- * Export users storage for testing
- */
-export function getUsersStorage() {
-  return users;
+export async function loginHandler(req: HttpRequest): Promise<HttpResponseInit> {
+  try {
+    const body = (await req.json()) as any;
+    const { email, password } = body;
+    if (!email || !password) {
+      return { status: 400, jsonBody: { success: false, error: 'VALIDATION_ERROR', message: 'Email and password are required' } };
+    }
+
+    const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
+    if (!user) {
+      return { status: 401, jsonBody: { success: false, error: 'INVALID_CREDENTIALS', message: 'Invalid email or password' } };
+    }
+    const passwordMatch = await comparePassword(password, user.passwordHash);
+    if (!passwordMatch) {
+      return { status: 401, jsonBody: { success: false, error: 'INVALID_CREDENTIALS', message: 'Invalid email or password' } };
+    }
+
+    const tokenPair = generateTokenPair({ sub: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName });
+    const [accessHash, refreshHash] = await Promise.all([hashToken(tokenPair.accessToken), hashToken(tokenPair.refreshToken)]);
+    const refreshExpiryMs = parseDurationMillis(process.env.JWT_REFRESH_EXPIRY || '7d');
+    const sessionExpiresAt = new Date(Date.now() + (refreshExpiryMs || 7 * 24 * 60 * 60 * 1000));
+
+    await prisma.session.create({
+      data: {
+        userId: user.id,
+        tokenHash: accessHash,
+        refreshTokenHash: refreshHash,
+        expiresAt: sessionExpiresAt,
+        deviceInfo: req.headers.get('user-agent') || null,
+        ipAddress: req.headers.get('x-forwarded-for') || req.headers.get('client-ip') || null,
+      },
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        userId: user.id,
+        action: 'USER_LOGIN',
+        resourceType: 'USER',
+        resourceId: user.id,
+        changes: JSON.stringify({ email: user.email }),
+        ipAddress: req.headers.get('x-forwarded-for') || req.headers.get('client-ip') || null,
+        userAgent: req.headers.get('user-agent') || null,
+      },
+    });
+
+    return { status: 200, jsonBody: { success: true, data: { user: { id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName }, accessToken: tokenPair.accessToken, refreshToken: tokenPair.refreshToken }, message: 'Login successful' } };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Login error:', errorMessage);
+    return { status: 500, jsonBody: { success: false, error: 'LOGIN_FAILED', message: `Login failed: ${errorMessage}` } };
+  }
+}
+
+export async function verifyEmailHandler(req: HttpRequest): Promise<HttpResponseInit> {
+  try {
+    const body = (await req.json()) as any;
+    const { token } = body;
+    if (!token) return { status: 400, jsonBody: { success: false, error: 'VALIDATION_ERROR', message: 'Verification token is required' } };
+    const payload = verifyAccessToken(token);
+    if (!payload) return { status: 401, jsonBody: { success: false, error: 'INVALID_TOKEN', message: 'Invalid or expired verification token' } };
+    const updatedUser = await prisma.user.update({ where: { id: payload.sub }, data: { emailVerified: true } });
+    await prisma.auditLog.create({ data: { userId: updatedUser.id, action: 'EMAIL_VERIFIED', resourceType: 'USER', resourceId: updatedUser.id, changes: JSON.stringify({ email: updatedUser.email }), ipAddress: req.headers.get('x-forwarded-for') || req.headers.get('client-ip') || null, userAgent: req.headers.get('user-agent') || null } });
+    return { status: 200, jsonBody: { success: true, message: 'Email verified successfully' } };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Email verification error:', errorMessage);
+    return { status: 500, jsonBody: { success: false, error: 'VERIFICATION_FAILED', message: `Email verification failed: ${errorMessage}` } };
+  }
+}
+
+export async function forgotPasswordHandler(req: HttpRequest): Promise<HttpResponseInit> {
+  try {
+    const body = (await req.json()) as any;
+    const { email } = body;
+    if (!email) return { status: 400, jsonBody: { success: false, error: 'VALIDATION_ERROR', message: 'Email is required' } };
+    const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
+    if (user) {
+      const resetToken = generateVerificationToken();
+      await prisma.auditLog.create({ data: { userId: user.id, action: 'PASSWORD_RESET_REQUESTED', resourceType: 'USER', resourceId: user.id, changes: JSON.stringify({ email: user.email }), ipAddress: req.headers.get('x-forwarded-for') || req.headers.get('client-ip') || null, userAgent: req.headers.get('user-agent') || null } });
+      // TODO: integrate SendGrid/Azure Communication Services to send reset email with resetToken
+    }
+    return { status: 200, jsonBody: { success: true, message: 'If an account exists with this email, a password reset link will be sent' } };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Forgot password error:', errorMessage);
+    return { status: 500, jsonBody: { success: false, error: 'FORGOT_PASSWORD_FAILED', message: `Forgot password failed: ${errorMessage}` } };
+  }
+}
+
+export async function logoutHandler(req: HttpRequest): Promise<HttpResponseInit> {
+  try {
+    const token = extractTokenFromHeader(req.headers.get('authorization') || '');
+    if (!token) return { status: 401, jsonBody: { success: false, error: 'UNAUTHORIZED', message: 'No authentication token provided' } };
+    const payload = verifyAccessToken(token);
+    if (!payload) return { status: 401, jsonBody: { success: false, error: 'INVALID_TOKEN', message: 'Invalid or expired token' } };
+    await prisma.session.deleteMany({ where: { userId: payload.sub } });
+    await prisma.auditLog.create({ data: { userId: payload.sub, action: 'USER_LOGOUT', resourceType: 'USER', resourceId: payload.sub, changes: JSON.stringify({ email: payload.email }), ipAddress: req.headers.get('x-forwarded-for') || req.headers.get('client-ip') || null, userAgent: req.headers.get('user-agent') || null } });
+    return { status: 200, jsonBody: { success: true, message: 'Logout successful' } };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Logout error:', errorMessage);
+    return { status: 500, jsonBody: { success: false, error: 'LOGOUT_FAILED', message: `Logout failed: ${errorMessage}` } };
+  }
+}
+
+export async function refreshTokenHandler(req: HttpRequest): Promise<HttpResponseInit> {
+  try {
+    const body = (await req.json()) as any;
+    const { refreshToken } = body;
+    if (!refreshToken) return { status: 400, jsonBody: { success: false, error: 'VALIDATION_ERROR', message: 'Refresh token is required' } };
+    const decoded = verifyRefreshToken(refreshToken);
+    if (!decoded || !decoded.sub) return { status: 401, jsonBody: { success: false, error: 'INVALID_TOKEN', message: 'Invalid or expired refresh token' } };
+    const sessions = await prisma.session.findMany({ where: { userId: decoded.sub, revokedAt: null }, orderBy: { createdAt: 'desc' }, take: 10 });
+    let matchedSession: { id: string } | null = null;
+    for (const s of sessions) { if (await validateSessionToken(refreshToken, s.refreshTokenHash)) { matchedSession = { id: s.id }; break; } }
+    if (!matchedSession) return { status: 401, jsonBody: { success: false, error: 'SESSION_NOT_FOUND', message: 'Session not found or token has been rotated' } };
+    const user = await prisma.user.findUnique({ where: { id: decoded.sub } });
+    if (!user) return { status: 404, jsonBody: { success: false, error: 'USER_NOT_FOUND', message: 'User not found' } };
+    const tokenPair = generateTokenPair({ sub: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName });
+    const [newAccessHash, newRefreshHash] = await Promise.all([hashToken(tokenPair.accessToken), hashToken(tokenPair.refreshToken)]);
+    const refreshExpiryMs = parseDurationMillis(process.env.JWT_REFRESH_EXPIRY || '7d');
+    const newExpiresAt = new Date(Date.now() + (refreshExpiryMs || 7 * 24 * 60 * 60 * 1000));
+    await prisma.session.update({ where: { id: matchedSession.id }, data: { tokenHash: newAccessHash, refreshTokenHash: newRefreshHash, expiresAt: newExpiresAt } });
+    await prisma.auditLog.create({ data: { userId: user.id, action: 'TOKEN_REFRESH', resourceType: 'USER', resourceId: user.id, changes: null, ipAddress: req.headers.get('x-forwarded-for') || req.headers.get('client-ip') || null, userAgent: req.headers.get('user-agent') || null } });
+    return { status: 200, jsonBody: { success: true, data: { accessToken: tokenPair.accessToken, refreshToken: tokenPair.refreshToken }, message: 'Token refreshed' } };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Refresh token error:', errorMessage);
+    return { status: 500, jsonBody: { success: false, error: 'REFRESH_FAILED', message: `Token refresh failed: ${errorMessage}` } };
+  }
 }

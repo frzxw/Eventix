@@ -1,178 +1,120 @@
 /**
- * Events API Handlers
- * Handles event listing, searching, and details
+ * Events API Handlers - Production (Prisma + Azure SQL)
  */
+import { HttpRequest, HttpResponseInit } from '@azure/functions';
+import prisma from '../prisma';
 
-import { Context, HttpRequest } from "@azure/functions";
-import { mockEvents } from "../../src/lib/mock-data";
-import type { Event } from "../../src/lib/types";
+type SortOption = 'date' | 'popularity';
 
-interface ApiResponse<T> {
-  success: boolean;
-  data?: T;
-  error?: string;
-  total?: number;
-  page?: number;
-}
+function ok(body: any): HttpResponseInit { return { status: 200, jsonBody: body }; }
+function badRequest(message: string): HttpResponseInit { return { status: 400, jsonBody: { success: false, error: 'BAD_REQUEST', message } }; }
+function notFound(message: string): HttpResponseInit { return { status: 404, jsonBody: { success: false, error: 'NOT_FOUND', message } }; }
+function fail(message: string): HttpResponseInit { return { status: 500, jsonBody: { success: false, error: 'SERVER_ERROR', message } }; }
 
-/**
- * GET /api/events
- * List all events with optional filtering
- * Query params: category?, city?, minPrice?, maxPrice?, page?, limit?
- */
-export async function getEvents(context: Context, req: HttpRequest): Promise<void> {
+export async function listEventsHandler(req: HttpRequest): Promise<HttpResponseInit> {
   try {
-    const { category, city, minPrice, maxPrice, page = "1", limit = "12" } = req.query;
+    const url = new URL(req.url);
+    const category = url.searchParams.get('category') || undefined;
+    const city = url.searchParams.get('city') || undefined;
+    const date = url.searchParams.get('date') || undefined;
+    const search = url.searchParams.get('search') || undefined;
+    const sort = (url.searchParams.get('sort') as SortOption) || 'date';
+    const page = Math.max(1, parseInt(url.searchParams.get('page') || '1', 10));
+    const limit = Math.min(50, Math.max(1, parseInt(url.searchParams.get('limit') || '12', 10)));
+    const skip = (page - 1) * limit;
 
-    let filtered = [...mockEvents];
-
-    // Filter by category
-    if (category && category !== "all") {
-      filtered = filtered.filter((e) => e.category === category);
+    const where: any = {};
+    if (category && category !== 'all') where.category = category;
+    if (city) where.venueCity = { equals: city };
+    if (date) {
+      const start = new Date(date);
+      const end = new Date(start);
+      end.setDate(end.getDate() + 1);
+      where.date = { gte: start, lt: end };
+    }
+    if (search) {
+      where.OR = [
+        { title: { contains: search } },
+        { description: { contains: search } },
+        { venueCity: { contains: search } },
+      ];
     }
 
-    // Filter by city
-    if (city) {
-      filtered = filtered.filter((e) => e.venue.city.toLowerCase() === city.toLowerCase());
-    }
+    const orderBy = sort === 'popularity' ? ({ viewCount: 'desc' as const }) : ({ date: 'asc' as const });
+    const [total, events] = await Promise.all([
+      prisma.event.count({ where }),
+      prisma.event.findMany({ where, orderBy, skip, take: limit, select: {
+        id: true, title: true, description: true, category: true, date: true, year: true,
+        venueName: true, venueCity: true, imageUrl: true, bannerImageUrl: true, isFeatured: true, viewCount: true,
+      }}),
+    ]);
 
-    // Filter by price range
-    if (minPrice || maxPrice) {
-      const min = minPrice ? parseInt(minPrice as string) : 0;
-      const max = maxPrice ? parseInt(maxPrice as string) : Infinity;
-      filtered = filtered.filter((e) => e.pricing.min >= min && e.pricing.max <= max);
-    }
-
-    // Pagination
-    const pageNum = parseInt(page as string) || 1;
-    const pageSize = parseInt(limit as string) || 12;
-    const start = (pageNum - 1) * pageSize;
-    const paginated = filtered.slice(start, start + pageSize);
-
-    context.res = {
-      status: 200,
-      body: {
-        success: true,
-        data: paginated,
-        total: filtered.length,
-        page: pageNum,
-        totalPages: Math.ceil(filtered.length / pageSize),
-      } as ApiResponse<Event[]>,
-    };
-  } catch (error: any) {
-    context.log.error("getEvents error:", error);
-    context.res = {
-      status: 500,
-      body: { success: false, error: "Failed to fetch events" },
-    };
+    return ok({ success: true, events, total, page, totalPages: Math.ceil(total / limit) });
+  } catch (e: any) {
+    return fail(`Failed to list events: ${e?.message || 'Unknown error'}`);
   }
 }
 
-/**
- * GET /api/events/:id
- * Get event details by ID
- */
-export async function getEventById(context: Context, req: HttpRequest): Promise<void> {
+export async function getEventHandler(req: HttpRequest): Promise<HttpResponseInit> {
   try {
-    // Extract ID from URL
-    const urlParts = req.url.split("/");
-    const eventId = urlParts[urlParts.length - 1]?.split("?")[0];
+    const path = new URL(req.url).pathname;
+    const id = path.split('/').pop();
+    if (!id) return badRequest('Event ID is required');
 
-    if (!eventId) {
-      context.res = {
-        status: 400,
-        body: { success: false, error: "Event ID is required" },
-      };
-      return;
-    }
+    const event = await prisma.event.findUnique({ where: { id }, include: { ticketCategories: true } });
+    if (!event) return notFound('Event not found');
 
-    const event = mockEvents.find((e) => e.id === eventId);
+    const related = await prisma.event.findMany({
+      where: { category: event.category, id: { not: id } },
+      orderBy: { date: 'asc' },
+      take: 6,
+      select: { id: true, title: true, date: true, venueCity: true, imageUrl: true, isFeatured: true },
+    });
 
-    if (!event) {
-      context.res = {
-        status: 404,
-        body: { success: false, error: "Event not found" },
-      };
-      return;
-    }
-
-    context.res = {
-      status: 200,
-      body: { success: true, data: event } as ApiResponse<Event>,
-    };
-  } catch (error: any) {
-    context.log.error("getEventById error:", error);
-    context.res = {
-      status: 500,
-      body: { success: false, error: "Failed to fetch event" },
-    };
+    return ok({ success: true, event, ticketCategories: event.ticketCategories, relatedEvents: related });
+  } catch (e: any) {
+    return fail(`Failed to fetch event: ${e?.message || 'Unknown error'}`);
   }
 }
 
-/**
- * GET /api/events/featured
- * Get featured events only
- */
-export async function getFeaturedEvents(context: Context, req: HttpRequest): Promise<void> {
+export async function featuredEventsHandler(): Promise<HttpResponseInit> {
   try {
-    const featured = mockEvents.filter((e) => e.featured);
-
-    context.res = {
-      status: 200,
-      body: {
-        success: true,
-        data: featured,
-      } as ApiResponse<Event[]>,
-    };
-  } catch (error: any) {
-    context.log.error("getFeaturedEvents error:", error);
-    context.res = {
-      status: 500,
-      body: { success: false, error: "Failed to fetch featured events" },
-    };
+    const events = await prisma.event.findMany({
+      where: { isFeatured: true },
+      orderBy: { date: 'asc' },
+      take: 12,
+      select: { id: true, title: true, date: true, venueCity: true, imageUrl: true, isFeatured: true },
+    });
+    return ok({ success: true, events });
+  } catch (e: any) {
+    return fail(`Failed to fetch featured events: ${e?.message || 'Unknown error'}`);
   }
 }
 
-/**
- * GET /api/search
- * Search events by query
- * Query params: q (search term)
- */
-export async function searchEvents(context: Context, req: HttpRequest): Promise<void> {
+export async function searchEventsHandler(req: HttpRequest): Promise<HttpResponseInit> {
   try {
-    const query = req.query.q as string;
-
-    if (!query || query.trim().length < 2) {
-      context.res = {
-        status: 200,
-        body: { success: true, data: [] } as ApiResponse<Event[]>,
-      };
-      return;
+    const url = new URL(req.url);
+    const q = (url.searchParams.get('q') || '').trim();
+    if (!q || q.length < 2) {
+      return ok({ success: true, events: [], total: 0 });
     }
 
-    const lowercaseQuery = query.toLowerCase();
-    const results = mockEvents.filter(
-      (event) =>
-        event.title.toLowerCase().includes(lowercaseQuery) ||
-        event.artist.toLowerCase().includes(lowercaseQuery) ||
-        event.venue.city.toLowerCase().includes(lowercaseQuery) ||
-        event.venue.name.toLowerCase().includes(lowercaseQuery) ||
-        event.tags.some((tag) => tag.toLowerCase().includes(lowercaseQuery))
-    );
+    const events = await prisma.event.findMany({
+      where: {
+        OR: [
+          { title: { contains: q } },
+          { description: { contains: q } },
+          { venueCity: { contains: q } },
+          { venueName: { contains: q } },
+        ],
+      },
+      orderBy: { date: 'asc' },
+      take: 25,
+      select: { id: true, title: true, date: true, venueCity: true, venueName: true, imageUrl: true, isFeatured: true },
+    });
 
-    context.res = {
-      status: 200,
-      body: {
-        success: true,
-        data: results,
-        total: results.length,
-      } as ApiResponse<Event[]>,
-    };
-  } catch (error: any) {
-    context.log.error("searchEvents error:", error);
-    context.res = {
-      status: 500,
-      body: { success: false, error: "Failed to search events" },
-    };
+    return ok({ success: true, events, total: events.length });
+  } catch (e: any) {
+    return fail(`Failed to search events: ${e?.message || 'Unknown error'}`);
   }
 }

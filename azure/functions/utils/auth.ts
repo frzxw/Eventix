@@ -3,14 +3,14 @@
  */
 
 import bcryptjs from 'bcryptjs';
-import jwt, { SignOptions } from 'jsonwebtoken';
+import jwt, { SignOptions, Secret } from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-key-change-in-production';
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'dev-refresh-secret-change-in-production';
 const JWT_EXPIRY = process.env.JWT_EXPIRY || '15m';
 const JWT_REFRESH_EXPIRY = process.env.JWT_REFRESH_EXPIRY || '7d';
-const BCRYPT_ROUNDS = parseInt(process.env.BCRYPT_ROUNDS || '12', 10);
+const BCRYPT_ROUNDS = Math.max(parseInt(process.env.BCRYPT_ROUNDS || '12', 10), 10);
 
 export async function hashPassword(password: string): Promise<string> {
   return bcryptjs.hash(password, BCRYPT_ROUNDS);
@@ -31,13 +31,11 @@ export interface JWTPayload {
 }
 
 export function signAccessToken(payload: Omit<JWTPayload, 'type' | 'iat' | 'exp'>): string {
-  const opts: SignOptions = { expiresIn: JWT_EXPIRY as unknown as number };
-  return jwt.sign({ ...payload, type: 'access' }, JWT_SECRET as unknown as jwt.Secret, opts);
+  return jwt.sign({ ...payload, type: 'access' }, JWT_SECRET as Secret, { expiresIn: JWT_EXPIRY as any });
 }
 
 export function signRefreshToken(userId: string): string {
-  const opts: SignOptions = { expiresIn: JWT_REFRESH_EXPIRY as unknown as number };
-  return jwt.sign({ sub: userId, type: 'refresh' }, JWT_REFRESH_SECRET as unknown as jwt.Secret, opts);
+  return jwt.sign({ sub: userId, type: 'refresh' }, JWT_REFRESH_SECRET as Secret, { expiresIn: JWT_REFRESH_EXPIRY as any });
 }
 
 export function verifyAccessToken(token: string): JWTPayload | null {

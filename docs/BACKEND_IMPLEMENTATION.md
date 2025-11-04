@@ -111,7 +111,7 @@ Azure Functions HTTP trigger configuration:
 - Integration examples
 - Frontend usage patterns
 
-#### `docs/BACKEND_SETUP.md` (Development Setup Guide)
+#### `docs/guides/BACKEND_SETUP.md` (Development Setup Guide)
 **Includes:**
 - Directory structure overview
 - Setup instructions

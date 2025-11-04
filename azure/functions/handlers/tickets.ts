@@ -1,189 +1,162 @@
 /**
- * Tickets API Handler
- * Handles ticket retrieval and QR code generation
+ * Tickets Handlers - Production (Prisma)
  */
+import { HttpRequest, HttpResponseInit } from '@azure/functions';
+import prisma from '../prisma';
+import { extractTokenFromHeader, verifyAccessToken } from '../utils/auth';
+import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import { generateQRCodeBuffer } from '../utils/qrcode';
 
-import { Context, HttpRequest } from "@azure/functions";
-import type { Ticket } from "../../src/lib/types";
-
-interface ApiResponse<T> {
-  success: boolean;
-  data?: T;
-  error?: string;
-}
-
-// Mock tickets storage
-const ticketsStorage: Map<string, Ticket[]> = new Map();
+function ok(body: any): HttpResponseInit { return { status: 200, jsonBody: body }; }
+function badRequest(message: string): HttpResponseInit { return { status: 400, jsonBody: { success: false, error: 'BAD_REQUEST', message } }; }
+function unauthorized(message: string): HttpResponseInit { return { status: 401, jsonBody: { success: false, error: 'UNAUTHORIZED', message } }; }
+function notFound(message: string): HttpResponseInit { return { status: 404, jsonBody: { success: false, error: 'NOT_FOUND', message } }; }
+function fail(message: string): HttpResponseInit { return { status: 500, jsonBody: { success: false, error: 'SERVER_ERROR', message } }; }
 
 /**
- * Generate a mock ticket for demonstration
+ * GET /api/tickets/my-tickets
  */
-function generateMockTicket(orderId: string, eventId: string, categoryName: string, index: number): Ticket {
-  const ticketId = `TKT-${orderId}-${index + 1}`;
-  return {
-    id: ticketId,
-    orderId,
-    eventId,
-    eventTitle: "Event Title", // Would be retrieved from database
-    eventDate: "2025-07-15",
-    eventTime: "14:00",
-    venue: "Jakarta International Expo",
-    category: categoryName,
-    qrCode: generateQRCode(ticketId),
-    barcode: generateBarcode(ticketId),
-    customerName: "Customer Name", // Would be from order details
-    status: "valid",
-  };
-}
-
-/**
- * Generate SVG QR Code (mock)
- */
-function generateQRCode(ticketId: string): string {
-  // In production, use a QR code library like 'qrcode'
-  return `data:image/svg+xml,${encodeURIComponent(`
-    <svg width="200" height="200" xmlns="http://www.w3.org/2000/svg">
-      <rect width="200" height="200" fill="white"/>
-      <g fill="black">
-        <rect x="10" y="10" width="20" height="20"/>
-        <rect x="50" y="10" width="20" height="20"/>
-        <rect x="90" y="10" width="20" height="20"/>
-        <rect x="10" y="50" width="20" height="20"/>
-        <rect x="50" y="50" width="20" height="20"/>
-        <rect x="90" y="50" width="20" height="20"/>
-      </g>
-      <text x="50%" y="85%" text-anchor="middle" font-family="monospace" font-size="10">${ticketId}</text>
-    </svg>
-  `)}`;
-}
-
-/**
- * Generate mock barcode
- */
-function generateBarcode(ticketId: string): string {
-  // Mock barcode - in production would use barcode library
-  return ticketId.split("").map((c) => (c.charCodeAt(0) % 10).toString()).join("");
-}
-
-/**
- * GET /api/tickets/:orderId
- * Get all tickets for an order
- */
-export async function getTickets(context: Context, req: HttpRequest): Promise<void> {
+export async function myTicketsHandler(req: HttpRequest): Promise<HttpResponseInit> {
   try {
-    const urlParts = req.url.split("/");
-    const orderId = urlParts[urlParts.length - 1]?.split("?")[0];
+    const auth = extractTokenFromHeader(req.headers.get('authorization') || undefined);
+    const userPayload = auth ? verifyAccessToken(auth) : null;
+    if (!userPayload) return unauthorized('Authentication required');
 
-    if (!orderId) {
-      context.res = {
-        status: 400,
-        body: { success: false, error: "Order ID is required" },
-      };
-      return;
-    }
-
-    // Check if tickets already generated
-    let tickets = ticketsStorage.get(orderId);
-
-    // If not, generate mock tickets
-    if (!tickets) {
-      // Generate 3 mock tickets for demonstration
-      tickets = [
-        generateMockTicket(orderId, "evt-001", "General Admission", 0),
-        generateMockTicket(orderId, "evt-001", "General Admission", 1),
-        generateMockTicket(orderId, "evt-001", "General Admission", 2),
-      ];
-
-      ticketsStorage.set(orderId, tickets);
-    }
-
-    context.res = {
-      status: 200,
-      body: {
-        success: true,
-        data: tickets,
-      } as ApiResponse<Ticket[]>,
-    };
-  } catch (error: any) {
-    context.log.error("getTickets error:", error);
-    context.res = {
-      status: 500,
-      body: { success: false, error: "Failed to fetch tickets" },
-    };
-  }
-}
-
-/**
- * POST /api/tickets/:orderId/validate
- * Validate a ticket (check QR code)
- * Used by event organizers/scanners
- */
-export async function validateTicket(context: Context, req: HttpRequest): Promise<void> {
-  try {
-    if (req.method !== "POST") {
-      context.res = { status: 405, body: { success: false, error: "Method not allowed" } };
-      return;
-    }
-
-    const { ticketId } = req.body;
-
-    if (!ticketId) {
-      context.res = {
-        status: 400,
-        body: { success: false, error: "Ticket ID is required" },
-      };
-      return;
-    }
-
-    // Find ticket
-    let foundTicket: Ticket | undefined;
-    for (const tickets of Array.from(ticketsStorage.values())) {
-      foundTicket = tickets.find((t) => t.id === ticketId);
-      if (foundTicket) break;
-    }
-
-    if (!foundTicket) {
-      context.res = {
-        status: 404,
-        body: { success: false, error: "Ticket not found" },
-      };
-      return;
-    }
-
-    // Check if already used
-    if (foundTicket.status === "used") {
-      context.res = {
-        status: 400,
-        body: { success: false, error: "Ticket already used" },
-      };
-      return;
-    }
-
-    // Mark as used
-    foundTicket.status = "used";
-
-    context.res = {
-      status: 200,
-      body: {
-        success: true,
-        data: {
-          message: "Ticket validated successfully",
-          ticket: foundTicket,
-        },
+    const tickets = await prisma.ticket.findMany({
+      where: { order: { userId: userPayload.sub } } as any,
+      orderBy: { createdAt: 'desc' as const },
+      select: {
+        id: true,
+        ticketNumber: true,
+        status: true,
+        eventId: true,
+        orderId: true,
+        qrCodeUrl: true,
+        qrCodeData: true,
       },
-    };
-  } catch (error: any) {
-    context.log.error("validateTicket error:", error);
-    context.res = {
-      status: 500,
-      body: { success: false, error: "Failed to validate ticket" },
-    };
+    });
+
+    return ok({ success: true, tickets });
+  } catch (e: any) {
+    return fail(`Failed to fetch tickets: ${e?.message || 'Unknown error'}`);
   }
 }
 
 /**
- * Export tickets storage for testing
+ * POST /api/tickets/:id/transfer
  */
-export function getTicketsStorage() {
-  return ticketsStorage;
+export async function transferTicketHandler(req: HttpRequest): Promise<HttpResponseInit> {
+  try {
+    const auth = extractTokenFromHeader(req.headers.get('authorization') || undefined);
+    const userPayload = auth ? verifyAccessToken(auth) : null;
+    if (!userPayload) return unauthorized('Authentication required');
+
+    const id = new URL(req.url).pathname.split('/').pop();
+    if (!id) return badRequest('Ticket ID is required');
+    const body = (await req.json()) as { toEmail?: string };
+    if (!body?.toEmail) return badRequest('toEmail is required');
+
+    const ticket = await prisma.ticket.findUnique({ where: { id }, include: { order: true } });
+    if (!ticket) return notFound('Ticket not found');
+    if (ticket.order?.userId !== userPayload.sub) return unauthorized('Ticket does not belong to you');
+
+    const updated = await prisma.ticket.update({
+      where: { id },
+      data: { transferredToEmail: body.toEmail, transferredAt: new Date(), status: 'transferred' } as any,
+      select: { id: true, ticketNumber: true, status: true, transferredToEmail: true, transferredAt: true },
+    });
+
+    return ok({ success: true, ticket: updated });
+  } catch (e: any) {
+    return fail(`Failed to transfer ticket: ${e?.message || 'Unknown error'}`);
+  }
+}
+
+/**
+ * GET /api/tickets/:id/download
+ */
+export async function downloadTicketPdfHandler(req: HttpRequest): Promise<HttpResponseInit> {
+  try {
+    const id = new URL(req.url).pathname.split('/').pop();
+    if (!id) return badRequest('Ticket ID is required');
+    const ticket = await prisma.ticket.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        ticketNumber: true,
+        status: true,
+        eventId: true,
+        orderId: true,
+        categoryId: true,
+        qrCodeData: true,
+      },
+    });
+    if (!ticket) return notFound('Ticket not found');
+
+    const [event, order, category] = await Promise.all([
+      prisma.event.findUnique({
+        where: { id: ticket.eventId },
+        select: { id: true, title: true, date: true, venueName: true, venueCity: true },
+      }),
+      prisma.order.findUnique({
+        where: { id: ticket.orderId },
+        select: { id: true, attendeeFirstName: true, attendeeLastName: true, attendeeEmail: true },
+      }) as any,
+      prisma.ticketCategory?.findUnique?.({
+        where: { id: ticket.categoryId },
+        select: { id: true, name: true, price: true, currency: true },
+      } as any) || Promise.resolve(null),
+    ]);
+
+    const qrPayload = ticket.qrCodeData || `EVENTIX:${ticket.ticketNumber}:${ticket.eventId}:${ticket.orderId}`;
+    const qrPng = await generateQRCodeBuffer(qrPayload);
+
+    const pdfDoc = await PDFDocument.create();
+    const page = pdfDoc.addPage([595.28, 841.89]);
+    const { width, height } = page.getSize();
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const bold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    const qrImage = await pdfDoc.embedPng(qrPng);
+
+    const pad = 40;
+    page.drawText('Eventix Ticket', { x: pad, y: height - pad - 12, size: 20, font: bold, color: rgb(0.35, 0.35, 0.9) });
+    page.drawLine({ start: { x: pad, y: height - pad - 18 }, end: { x: width - pad, y: height - pad - 18 }, thickness: 1, color: rgb(0.85, 0.85, 0.95) });
+
+    const yStart = height - pad - 60;
+    let y = yStart;
+    const textSize = 12;
+    const lineGap = 18;
+
+    const eventTitle = event?.title || 'Event';
+    const when = event?.date ? new Date(event.date as any).toLocaleDateString('en-US') : '';
+    const venue = [event?.venueName, event?.venueCity].filter(Boolean).join(', ');
+    const attendee = [order?.attendeeFirstName, order?.attendeeLastName].filter(Boolean).join(' ') || order?.attendeeEmail || '';
+    const catName = category?.name ? ` (${category.name})` : '';
+
+    page.drawText(`Event: ${eventTitle}`, { x: pad, y, size: textSize + 1, font: bold }); y -= lineGap;
+    if (when) { page.drawText(`When: ${when}`, { x: pad, y, size: textSize, font }); y -= lineGap; }
+    if (venue) { page.drawText(`Venue: ${venue}`, { x: pad, y, size: textSize, font }); y -= lineGap; }
+    if (attendee) { page.drawText(`Attendee: ${attendee}`, { x: pad, y, size: textSize, font }); y -= lineGap; }
+    page.drawText(`Ticket: ${ticket.ticketNumber}${catName}`, { x: pad, y, size: textSize, font }); y -= lineGap * 1.5;
+
+    const qrSize = 180;
+    const qrX = pad;
+    const qrY = y - qrSize;
+    page.drawRectangle({ x: qrX - 10, y: qrY - 10, width: qrSize + 20, height: qrSize + 20, color: rgb(0.97, 0.97, 0.99) });
+    page.drawImage(qrImage, { x: qrX, y: qrY, width: qrSize, height: qrSize });
+    page.drawText('Please present this QR at entry', { x: qrX, y: qrY - 16, size: 10, font, color: rgb(0.3, 0.3, 0.3) });
+
+    page.drawText('© Eventix — Secure, unique QR. Do not share.', { x: pad, y: 20, size: 9, font, color: rgb(0.45, 0.45, 0.45) });
+
+    const pdfBytes = await pdfDoc.save();
+    const filename = `Ticket-${ticket.ticketNumber}.pdf`;
+    const headers = {
+      'content-type': 'application/pdf',
+      'content-disposition': `attachment; filename="${filename}"`,
+      'cache-control': 'no-store',
+    };
+    return { status: 200, headers, body: Buffer.from(pdfBytes) as any };
+  } catch (e: any) {
+    return fail(`Failed to download ticket: ${e?.message || 'Unknown error'}`);
+  }
 }

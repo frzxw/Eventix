@@ -35,13 +35,23 @@ import {
   forgotPasswordHandler,
   logoutHandler,
   refreshTokenHandler,
-} from "./handlers/auth-production";
+} from "./handlers/auth";
 import {
   listEventsHandler,
   getEventHandler,
   featuredEventsHandler,
   searchEventsHandler,
-} from "./handlers/events-production";
+} from "./handlers/events";
+import {
+  createOrderHandler,
+  confirmOrderHandler,
+  myOrdersHandler,
+} from "./handlers/orders";
+import {
+  myTicketsHandler,
+  transferTicketHandler,
+  downloadTicketPdfHandler,
+} from "./handlers/tickets";
 
 // Route handlers map
 const routeHandlers: RouteHandlersMap = {
@@ -58,6 +68,16 @@ const routeHandlers: RouteHandlersMap = {
   "GET /api/events/:id": adaptHandler(getEventHandler),
   "GET /api/events/featured": adaptHandler(featuredEventsHandler),
   "GET /api/search": adaptHandler(searchEventsHandler),
+
+  // Orders
+  "POST /api/orders/create": adaptHandler(createOrderHandler),
+  "POST /api/orders/:id/confirm": adaptHandler(confirmOrderHandler),
+  "GET /api/orders/my-orders": adaptHandler(myOrdersHandler),
+
+  // Tickets
+  "GET /api/tickets/my-tickets": adaptHandler(myTicketsHandler),
+  "POST /api/tickets/:id/transfer": adaptHandler(transferTicketHandler),
+  "GET /api/tickets/:id/download": adaptHandler(downloadTicketPdfHandler),
 };
 
 /**

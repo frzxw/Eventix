@@ -10,7 +10,7 @@ interface EventDetailProps {
 }
 
 export function EventDetail({ event, onSelectTickets }: EventDetailProps) {
-  const formattedDate = new Date(event.date).toLocaleDateString('id-ID', {
+  const formattedDate = new Date(event.date).toLocaleDateString('en-US', {
     weekday: 'long',
     year: 'numeric',
     month: 'long',

@@ -23,7 +23,7 @@ export function formatCurrency(
 export function formatDate(
   date: string | Date,
   format: 'short' | 'long' | 'full' = 'long',
-  locale: string = 'id-ID'
+  locale: string = 'en-US'
 ): string {
   const dateObj = typeof date === 'string' ? new Date(date) : date;
 
@@ -51,7 +51,7 @@ export function formatDate(
 /**
  * Format time
  */
-export function formatTime(time: string, locale: string = 'id-ID'): string {
+export function formatTime(time: string, locale: string = 'en-US'): string {
   const [hours, minutes] = time.split(':');
   const date = new Date();
   date.setHours(parseInt(hours, 10));

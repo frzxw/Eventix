@@ -144,7 +144,7 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
                             <div className="flex items-center gap-3 mt-1">
                               <span className="text-xs text-[var(--text-secondary)] flex items-center gap-1">
                                 <Calendar className="w-3 h-3" />
-                                {new Date(event.date).toLocaleDateString('id-ID', { 
+                                {new Date(event.date).toLocaleDateString('en-US', { 
                                   month: 'short', 
                                   day: 'numeric' 
                                 })}

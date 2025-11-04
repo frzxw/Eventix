@@ -296,7 +296,7 @@ export function BookingStep3({ event, selections, attendeeInfo, onComplete, onBa
                   <div className="flex items-center gap-2">
                     <Calendar className="w-4 h-4" />
                     <span>
-                      {new Date(event.date).toLocaleDateString('id-ID', { 
+                      {new Date(event.date).toLocaleDateString('en-US', { 
                         weekday: 'short',
                         day: 'numeric',
                         month: 'long',

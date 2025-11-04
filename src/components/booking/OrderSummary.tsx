@@ -52,7 +52,7 @@ export function OrderSummary({
       <div className="mb-6 pb-6 border-b border-[var(--border-default)]">
         <p style={{ fontWeight: 'var(--font-weight-medium)' }}>{event.title}</p>
         <p className="text-sm text-[var(--text-secondary)] mt-1">
-          {new Date(event.date).toLocaleDateString('id-ID', {
+          {new Date(event.date).toLocaleDateString('en-US', {
             weekday: 'short',
             month: 'short',
             day: 'numeric',

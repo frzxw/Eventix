@@ -272,7 +272,7 @@ export function ProfilePage() {
                     ) : (
                       <div className="flex items-center gap-3 p-3 rounded-xl bg-[var(--surface-glass)]/30">
                         <Calendar className="w-4 h-4 text-[var(--text-secondary)]" />
-                        <span>{new Date(formData.birthDate).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                        <span>{new Date(formData.birthDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
                       </div>
                     )}
                   </div>

@@ -16,11 +16,11 @@ export function WalletTicket({ ticket, onAddToWallet, onAddToCalendar, onShare }
   
   // Parse date for better formatting
   const eventDate = new Date(ticket.eventDate);
-  const dayOfWeek = eventDate.toLocaleDateString('id-ID', { weekday: 'short' });
+  const dayOfWeek = eventDate.toLocaleDateString('en-US', { weekday: 'short' });
   const day = eventDate.getDate();
-  const month = eventDate.toLocaleDateString('id-ID', { month: 'short' });
+  const month = eventDate.toLocaleDateString('en-US', { month: 'short' });
   const year = eventDate.getFullYear();
-  const fullMonth = eventDate.toLocaleDateString('id-ID', { month: 'long' });
+  const fullMonth = eventDate.toLocaleDateString('en-US', { month: 'long' });
 
   return (
     <article 

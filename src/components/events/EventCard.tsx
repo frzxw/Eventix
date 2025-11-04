@@ -11,7 +11,7 @@ interface EventCardProps {
 
 export function EventCard({ event, onClick }: EventCardProps) {
   const eventDate = new Date(event.date);
-  const formattedDate = eventDate.toLocaleDateString('id-ID', {
+  const formattedDate = eventDate.toLocaleDateString('en-US', {
     weekday: 'short',
     month: 'short',
     day: 'numeric',

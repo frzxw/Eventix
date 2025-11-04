@@ -7,9 +7,11 @@ import { Separator } from '../ui/separator';
 import { PhoneInput } from '../ui/phone-input';
 import { CountrySelect } from '../ui/country-select';
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { formatCurrency } from '../../lib/utils';
 
 export function ProfilePage() {
+  const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     name: 'Budi Santoso',
@@ -339,7 +341,7 @@ export function ProfilePage() {
                   <Button
                     variant="ghost"
                     className="w-full justify-start glass-hover rounded-xl h-auto py-3"
-                    onClick={() => onNavigate?.('my-tickets')}
+                    onClick={() => navigate('/my-tickets')}
                   >
                     <Ticket className="w-5 h-5 mr-3 text-[var(--text-secondary)]" />
                     <div className="text-left">

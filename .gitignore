@@ -1,0 +1,212 @@
+# ========================================
+# Eventix - Production .gitignore
+# ========================================
+
+# ---- NODE & NPM ----
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+.npmrc
+.npm/
+
+# ---- BUILD & DIST ----
+dist/
+build/
+*.tsbuildinfo
+out/
+
+# ---- VITE ----
+.vite/
+.cache/
+
+# ---- ENVIRONMENT & SECRETS ----
+.env
+.env.*.local
+.env.local
+.env.production
+.env.staging
+.env.development
+!.env.example
+
+# ---- IDE & EDITOR ----
+.vscode/
+.vscode-test/
+.idea/
+.DS_Store
+*.suo
+*.sln
+*.csproj
+*.user
+.vs/
+.vs_code/
+*.swp
+*.swo
+*~
+.editorconfig
+.sublimetext
+
+# ---- OS ----
+Thumbs.db
+Desktop.ini
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# ---- TESTING ----
+coverage/
+.nyc_output/
+*.lcov
+.mocha/
+.jest/
+
+# ---- AZURE & CLOUD ----
+local.settings.json
+appsettings.*.json
+!appsettings.json
+.azure/
+.funcignore
+
+# ---- LOGS ----
+logs/
+*.log
+lerna-debug.log*
+
+# ---- TEMP & CACHE ----
+tmp/
+temp/
+*.tmp
+*.bak
+*.swp
+~*
+.cache/
+.parcel-cache/
+.next/
+.nuxt/
+.cache/
+.vuepress/dist/
+.serverless/
+.fusebox/
+.dynamodb/
+.tern-port/
+dist/
+.cache-loader/
+
+# ---- DATABASE ----
+*.db
+*.sqlite
+*.sqlite3
+*.realm
+*.mdb
+
+# ---- DOCUMENTATION BUILD ----
+site/
+.docusaurus/
+.docusaurus_cache/
+
+# ---- CERTIFICATES & SSL ----
+*.pem
+*.key
+*.cert
+*.csr
+*.crt
+*.pfx
+*.p12
+
+# ---- DOCKER ----
+.docker/
+docker-compose.override.yml
+
+# ---- MISC ----
+.DS_Store
+Thumbs.db
+.eslintcache
+.stylelintcache
+*.orig
+*.rej
+
+# ---- BACKUP & ARCHIVES ----
+*.backup
+*.bak
+*.tar
+*.tar.gz
+*.zip
+*.rar
+*.7z
+
+# ---- GIT ----
+.git/
+.gitignore_local
+.gitkeep
+
+# ---- CI/CD ----
+.github/workflows/
+!.github/workflows/azure-deploy.yml
+.gitlab-ci.yml
+.travis.yml
+.circleci/
+
+# ---- NODE MODULES (Alternative pattern) ----
+node_modules/
+bower_components/
+
+# ---- SECRETS & CREDENTIALS ----
+.secret
+secrets.json
+credentials.json
+*.gpg
+.ssh/
+.aws/
+.azure/config
+~/.config/
+
+# ---- PROJECT SPECIFIC ----
+# Add project-specific ignores here
+upload/
+uploads/
+temp/
+tmp/
+.local/
+
+# ---- VS CODE SPECIFIC ----
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/c_cpp_properties.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# ---- MONOREPO (if needed) ----
+# pnpm-workspace.yaml should be tracked
+# but lock files should not
+pnpm-lock.yaml
+
+# ---- AZURE FUNCTIONS SPECIFIC ----
+*.dll
+bin/
+obj/
+*.pdb
+
+# ---- BRANCH PROTECTION ----
+# Protect main branch
+# (handled in GitHub settings)
+
+# ---- DO NOT IGNORE ----
+# ! = Negate pattern (unignore)
+!.gitkeep
+!.env.example
+!.github/workflows/
+!docs/
+!src/
+!azure/

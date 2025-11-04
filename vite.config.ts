@@ -5,6 +5,15 @@
 
   export default defineConfig({
     plugins: [react()],
+    define: {
+      // Allow access to import.meta.env
+      'import.meta.env': Object.entries(process.env).reduce((acc, [key, value]) => {
+        if (key.startsWith('VITE_')) {
+          acc[key] = JSON.stringify(value);
+        }
+        return acc;
+      }, {} as Record<string, string>),
+    },
     resolve: {
       extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],
       alias: {

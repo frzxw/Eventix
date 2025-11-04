@@ -1,9 +1,10 @@
 import { motion } from 'motion/react';
-import { Button, type ButtonProps } from '../ui/button';
-import { forwardRef } from 'react';
+import { Button } from '../ui/button';
+import { forwardRef, type ComponentProps, type ReactNode } from 'react';
 
-export interface AnimatedButtonProps extends ButtonProps {
+export interface AnimatedButtonProps extends ComponentProps<typeof Button> {
   ripple?: boolean;
+  children?: ReactNode;
 }
 
 export const AnimatedButton = forwardRef<HTMLButtonElement, AnimatedButtonProps>(

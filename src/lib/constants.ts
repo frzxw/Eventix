@@ -47,11 +47,101 @@ export const DATE_FORMATS = {
   DATETIME: 'MMMM DD, YYYY HH:mm',
 } as const;
 
-// API Configuration (for when backend is implemented)
+// API Configuration - Azure Functions Backend
+const apiBaseUrl = (import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:7071/api';
+const apiTimeoutMs = (import.meta as any).env?.VITE_API_TIMEOUT_MS || '30000';
+
 export const API = {
-  BASE_URL: process.env.REACT_APP_API_URL || 'https://api.eventix.example.com',
-  TIMEOUT_MS: 30000,
+  BASE_URL: apiBaseUrl,
+  TIMEOUT_MS: parseInt(apiTimeoutMs),
   RETRY_ATTEMPTS: 3,
+  RETRY_DELAY_MS: 1000,
+  CIRCUIT_BREAKER_THRESHOLD: 5,
+  CIRCUIT_BREAKER_TIMEOUT_MS: 60000,
+} as const;
+
+// Azure Storage Configuration
+const storageAccountName = (import.meta as any).env?.VITE_STORAGE_ACCOUNT_NAME || 'eventixstorage';
+const containerEvents = (import.meta as any).env?.VITE_STORAGE_CONTAINER_EVENTS || 'event-images';
+const containerQrCodes = (import.meta as any).env?.VITE_STORAGE_CONTAINER_QR_CODES || 'qr-codes';
+const cdnUrl = (import.meta as any).env?.VITE_STORAGE_CDN_URL || 'https://eventixcdn.azureedge.net';
+
+export const AZURE_STORAGE = {
+  ACCOUNT_NAME: storageAccountName,
+  CONTAINER_EVENTS: containerEvents,
+  CONTAINER_QR_CODES: containerQrCodes,
+  CDN_URL: cdnUrl,
+  MAX_FILE_SIZE_MB: 5,
+  ALLOWED_FILE_TYPES: ['image/jpeg', 'image/png', 'image/webp'],
+} as const;
+
+// Azure Application Insights Configuration
+const appInsightsKey = (import.meta as any).env?.VITE_APPINSIGHTS_INSTRUMENTATION_KEY || '';
+const appInsightsConnStr = (import.meta as any).env?.VITE_APPINSIGHTS_CONNECTION_STRING || '';
+const enablePerformanceMonitoring = (import.meta as any).env?.VITE_ENABLE_PERFORMANCE_MONITORING !== 'false';
+
+export const AZURE_APPINSIGHTS = {
+  INSTRUMENTATION_KEY: appInsightsKey,
+  CONNECTION_STRING: appInsightsConnStr,
+  ENABLED: !!appInsightsKey,
+  ENABLE_PERFORMANCE_MONITORING: enablePerformanceMonitoring,
+  ENABLE_DEPENDENCY_TRACKING: true,
+  ENABLE_AJAX_TRACKING: true,
+  ENABLE_ERROR_TRACKING: true,
+} as const;
+
+// Authentication Configuration
+const jwtExpiryMinutes = (import.meta as any).env?.VITE_JWT_EXPIRY_MINUTES || '15';
+const jwtRefreshExpiryDays = (import.meta as any).env?.VITE_JWT_REFRESH_EXPIRY_DAYS || '7';
+const sessionTimeoutMinutes = (import.meta as any).env?.VITE_SESSION_TIMEOUT_MINUTES || '30';
+const rememberMeDurationDays = (import.meta as any).env?.VITE_REMEMBER_ME_DURATION_DAYS || '7';
+
+export const AUTH = {
+  JWT_EXPIRY_MINUTES: parseInt(jwtExpiryMinutes),
+  JWT_REFRESH_EXPIRY_DAYS: parseInt(jwtRefreshExpiryDays),
+  TOKEN_STORAGE_KEY: 'eventix_auth_token',
+  REFRESH_TOKEN_STORAGE_KEY: 'eventix_refresh_token',
+  USER_STORAGE_KEY: 'eventix_user',
+  SESSION_TIMEOUT_MINUTES: parseInt(sessionTimeoutMinutes),
+  REMEMBER_ME_DURATION_DAYS: parseInt(rememberMeDurationDays),
+} as const;
+
+// Payment Configuration
+const paymentProvider = (import.meta as any).env?.VITE_PAYMENT_PROVIDER || 'midtrans';
+const midtransClientKey = (import.meta as any).env?.VITE_MIDTRANS_CLIENT_KEY || '';
+const midtransMerchantId = (import.meta as any).env?.VITE_MIDTRANS_MERCHANT_ID || '';
+const midtransEnvironment = (import.meta as any).env?.VITE_MIDTRANS_ENVIRONMENT || 'sandbox';
+const enablePayment = (import.meta as any).env?.VITE_ENABLE_PAYMENT !== 'false';
+
+export const PAYMENT = {
+  PROVIDER: paymentProvider,
+  MIDTRANS_CLIENT_KEY: midtransClientKey,
+  MIDTRANS_MERCHANT_ID: midtransMerchantId,
+  MIDTRANS_ENVIRONMENT: midtransEnvironment,
+  ENABLED: enablePayment,
+} as const;
+
+// Feature Flags (Vite Environment)
+const enablePaymentFlag = (import.meta as any).env?.VITE_ENABLE_PAYMENT !== 'false';
+const enableAnalytics = (import.meta as any).env?.VITE_ENABLE_ANALYTICS !== 'false';
+const enableEmailNotifications = (import.meta as any).env?.VITE_ENABLE_EMAIL_NOTIFICATIONS !== 'false';
+const enableSmsNotifications = (import.meta as any).env?.VITE_ENABLE_SMS_NOTIFICATIONS !== 'false';
+const enableWalletIntegration = (import.meta as any).env?.VITE_ENABLE_WALLET_INTEGRATION !== 'false';
+
+export const FEATURE_FLAGS = {
+  ENABLE_PAYMENT: enablePaymentFlag,
+  ENABLE_ANALYTICS: enableAnalytics,
+  ENABLE_EMAIL_NOTIFICATIONS: enableEmailNotifications,
+  ENABLE_SMS_NOTIFICATIONS: enableSmsNotifications,
+  ENABLE_WALLET_INTEGRATION: enableWalletIntegration,
+} as const;
+
+// Environment
+export const ENVIRONMENT = {
+  NODE_ENV: (import.meta as any).env?.MODE,
+  VITE_ENVIRONMENT: (import.meta as any).env?.VITE_ENVIRONMENT || 'development',
+  IS_PRODUCTION: (import.meta as any).env?.MODE === 'production',
+  IS_DEVELOPMENT: (import.meta as any).env?.MODE === 'development',
 } as const;
 
 // Feature Flags

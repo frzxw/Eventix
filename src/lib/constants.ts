@@ -48,7 +48,10 @@ export const DATE_FORMATS = {
 } as const;
 
 // API Configuration - Azure Functions Backend
-const apiBaseUrl = (import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:7071/api';
+// Prefer VITE_API_URL; fallback to VITE_API_BASE_URL for backward compatibility
+const apiBaseUrl = (import.meta as any).env?.VITE_API_URL
+  || (import.meta as any).env?.VITE_API_BASE_URL
+  || 'http://localhost:7071/api';
 const apiTimeoutMs = (import.meta as any).env?.VITE_API_TIMEOUT_MS || '30000';
 
 export const API = {

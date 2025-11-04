@@ -1,4 +1,31 @@
-# ========================================
+# Node / build
+node_modules/
+dist/
+build/
+
+# Local env files
+.env
+.env.*
+!.env.example
+!.env.development.example
+!.env.production.example
+.env.server
+!.env.server.example
+
+# Azure Functions local settings
+azure/functions/local.settings.json
+!azure/functions/local.settings.json.example
+
+# VS Code
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Azure scripts local overrides
+azure/scripts/00-az-variables.local.cmd
+azure/scripts/*.log# ========================================
 # Eventix - Production .gitignore
 # ========================================
 

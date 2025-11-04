@@ -1,0 +1,22 @@
+@echo off
+REM Local overrides for Azure variables (DO NOT COMMIT). Copy to 00-az-variables.local.cmd and fill values.
+
+REM Subscription and region
+set AZ_SUBSCRIPTION_ID=<your-subscription-id>
+set AZ_LOCATION=southeastasia
+
+REM Resource names and secrets
+set AZ_RG=eventix-rg
+set AZ_STORAGE=eventixstorage
+set AZ_SQLSERVER=eventix-sql-server
+set AZ_SQLADMIN=sqladmin
+set AZ_SQLPASSWORD=<StrongPassword!>
+set AZ_SQLDB=eventix-db
+set AZ_KEYVAULT=eventix-keyvault
+set AZ_APPINSIGHTS=eventix-ai
+set AZ_FUNCTIONAPP=eventix-api
+set AZ_SWA=eventix-swa
+
+REM Frontend build env
+set VITE_API_URL=https://%AZ_FUNCTIONAPP%.azurewebsites.net/api
+set VITE_APPINSIGHTS_CONNECTION_STRING=

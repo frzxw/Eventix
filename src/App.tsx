@@ -2,6 +2,8 @@ import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { Header } from './components/layout/Header';
 import { Footer } from './components/layout/Footer';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { ScrollToTop } from './components/ScrollToTop';
 import { HomePage } from './pages/HomePage';
 import { DiscoverPage } from './pages/DiscoverPage';
 import { EventDetailPage } from './pages/EventDetailPage';
@@ -13,6 +15,12 @@ import { SignUpPage } from './pages/auth/SignUpPage';
 import { ForgotPasswordPage } from './pages/auth/ForgotPasswordPage';
 import { ResetPasswordPage } from './pages/auth/ResetPasswordPage';
 import { VerifyEmailPage } from './pages/auth/VerifyEmailPage';
+import { OrderConfirmationPage } from './pages/OrderConfirmationPage';
+import { NotFoundPage } from './pages/NotFoundPage';
+import { FAQPage } from './pages/FAQPage';
+import { TermsPage } from './pages/TermsPage';
+import { PrivacyPage } from './pages/PrivacyPage';
+import { ContactPage } from './pages/ContactPage';
 import { Toaster } from './components/ui/sonner';
 
 // Animation variants
@@ -158,6 +166,65 @@ function AnimatedRoutes() {
           </motion.div>
         } />
         
+        {/* Order Confirmation */}
+        <Route path="/order-confirmation" element={
+          <motion.div
+            variants={pageVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            transition={pageTransition}
+          >
+            <OrderConfirmationPage />
+          </motion.div>
+        } />
+        
+        {/* Info Pages */}
+        <Route path="/faq" element={
+          <motion.div
+            variants={pageVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            transition={pageTransition}
+          >
+            <FAQPage />
+          </motion.div>
+        } />
+        <Route path="/terms" element={
+          <motion.div
+            variants={pageVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            transition={pageTransition}
+          >
+            <TermsPage />
+          </motion.div>
+        } />
+        <Route path="/privacy" element={
+          <motion.div
+            variants={pageVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            transition={pageTransition}
+          >
+            <PrivacyPage />
+          </motion.div>
+        } />
+        <Route path="/contact" element={
+          <motion.div
+            variants={pageVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            transition={pageTransition}
+          >
+            <ContactPage />
+          </motion.div>
+        } />
+        
         {/* 404 Catch-all route */}
         <Route path="*" element={
           <motion.div
@@ -167,7 +234,7 @@ function AnimatedRoutes() {
             exit="exit"
             transition={pageTransition}
           >
-            <HomePage />
+            <NotFoundPage />
           </motion.div>
         } />
       </Routes>
@@ -181,6 +248,9 @@ function AppContent() {
 
   return (
     <div className="min-h-screen flex flex-col">
+      {/* Scroll to top on route change */}
+      <ScrollToTop />
+      
       {/* Accessibility: Skip to main content */}
       <a
         href="#main-content"
@@ -225,8 +295,10 @@ function AppContent() {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <AppContent />
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <AppContent />
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }

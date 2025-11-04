@@ -59,7 +59,38 @@ export function CheckoutPage() {
   };
 
   const handleComplete = (orderId: string) => {
-    navigate('/my-tickets', { state: { orderId, eventId } });
+    // Store order details in localStorage for the confirmation page
+    if (attendeeInfo) {
+      const totalAmount = ticketSelections.reduce((sum, selection) => {
+        const category = event.ticketCategories.find((cat) => cat.id === selection.categoryId);
+        return sum + (category ? category.price * selection.quantity : 0);
+      }, 0);
+
+      const orderDetails = {
+        orderId,
+        eventTitle: event.title,
+        eventDate: event.date,
+        eventTime: event.time,
+        venueName: event.venue.name,
+        venueCity: event.venue.city,
+        tickets: ticketSelections.map((selection) => {
+          const category = event.ticketCategories.find((cat) => cat.id === selection.categoryId);
+          return {
+            category: category?.name || '',
+            quantity: selection.quantity,
+            price: category?.price || 0,
+          };
+        }),
+        totalAmount,
+        email: attendeeInfo.email,
+        confirmationSentAt: new Date().toISOString(),
+      };
+
+      localStorage.setItem('lastOrder', JSON.stringify(orderDetails));
+    }
+
+    // Navigate to order confirmation page
+    navigate('/order-confirmation');
   };
 
   return (

@@ -108,37 +108,27 @@ export function PromoCarousel() {
             </AnimatePresence>
 
             {/* Navigation Buttons */}
-            <motion.div
+            <motion.button
+              onClick={prevSlide}
               whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
+              whileTap={{ scale: 0.95 }}
               transition={{ duration: 0.2 }}
+              className="absolute left-4 top-1/2 -translate-y-1/2 z-10 transition-smooth focus-ring rounded-full h-10 w-10 sm:h-12 sm:w-12 bg-black/30 hover:bg-black/50 text-white border border-white/20 backdrop-blur-sm flex items-center justify-center"
+              aria-label="Previous banner"
             >
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={prevSlide}
-                className="absolute left-4 top-1/2 -translate-y-1/2 glass-hover transition-smooth focus-ring rounded-full h-8 w-8 sm:h-10 sm:w-10 bg-black/20 hover:bg-black/40 text-white border border-white/20"
-                aria-label="Previous banner"
-              >
-                <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
-              </Button>
-            </motion.div>
+              <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
+            </motion.button>
 
-            <motion.div
+            <motion.button
+              onClick={nextSlide}
               whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
+              whileTap={{ scale: 0.95 }}
               transition={{ duration: 0.2 }}
+              className="absolute right-4 top-1/2 -translate-y-1/2 z-10 transition-smooth focus-ring rounded-full h-10 w-10 sm:h-12 sm:w-12 bg-black/30 hover:bg-black/50 text-white border border-white/20 backdrop-blur-sm flex items-center justify-center"
+              aria-label="Next banner"
             >
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={nextSlide}
-                className="absolute right-4 top-1/2 -translate-y-1/2 glass-hover transition-smooth focus-ring rounded-full h-8 w-8 sm:h-10 sm:w-10 bg-black/20 hover:bg-black/40 text-white border border-white/20"
-                aria-label="Next banner"
-              >
-                <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
-              </Button>
-            </motion.div>
+              <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
+            </motion.button>
 
             {/* Carousel Indicators */}
             <div className="absolute bottom-3 sm:bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 z-10">

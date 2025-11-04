@@ -4,6 +4,7 @@ import { PromoCarousel } from '../components/home/PromoCarousel';
 import { EventCarousel } from '../components/home/EventCarousel';
 import { CategoryGrid } from '../components/home/CategoryGrid';
 import { EventCard } from '../components/events/EventCard';
+import { SEOHead } from '../components/SEOHead';
 import { mockEvents, getFeaturedEvents } from '../lib/mock-data';
 import { useNavigate } from 'react-router-dom';
 
@@ -21,6 +22,11 @@ export function HomePage() {
 
   return (
     <div>
+      <SEOHead
+        title="Eventix - Premium Online Ticketing Platform | Concert, Festival & Theater Tickets"
+        description="Discover and book tickets to the best concerts, festivals, theater shows, and live entertainment in Indonesia. Secure booking, instant delivery, best prices guaranteed."
+        keywords="event tickets, concert tickets, festival tickets, theater tickets, live entertainment, Indonesia tickets, Jakarta events, online booking"
+      />
       <Hero />
       
       <PromoCarousel />

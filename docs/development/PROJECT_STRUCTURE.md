@@ -47,13 +47,6 @@ eventix/
 ├── vite.config.ts                   # Vite build config
 │
 ├── README.md                        # Project README
-├── CONTRIBUTING.md                  # Contribution guide
-├── QUICK_START.md                   # Quick start (root)
-├── AZURE_DEPLOYMENT.md              # Deployment guide
-├── AZURE_CLOUD_SETUP.md             # Setup guide
-├── DEPLOYMENT_READY.md              # Status overview
-├── IMPLEMENTATION_SUMMARY.md        # Implementation details
-└── DOCS_INDEX.md                    # Documentation index
 ```
 
 ---

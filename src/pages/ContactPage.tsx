@@ -4,7 +4,7 @@ import { Mail, MapPin, Phone, Send, MessageCircle, Clock, CheckCircle2 } from 'l
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Textarea } from '../components/ui/textarea';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 
 export function ContactPage() {
   const [formData, setFormData] = useState({

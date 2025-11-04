@@ -210,3 +210,9 @@ obj/
 !docs/
 !src/
 !azure/
+
+# ---- PREVENT COMPILED JS IN SOURCE TREE ----
+# TypeScript-only source: ensure accidentally emitted JS isn't tracked
+src/**/*.js
+src/**/*.jsx
+src/**/*.js.map

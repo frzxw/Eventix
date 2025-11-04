@@ -22,6 +22,7 @@ import { TermsPage } from './pages/TermsPage';
 import { PrivacyPage } from './pages/PrivacyPage';
 import { ContactPage } from './pages/ContactPage';
 import { Toaster } from './components/ui/sonner';
+import { AuthProvider } from '@/context/AuthContext';
 
 // Animation variants
 const pageVariants = {
@@ -32,7 +33,8 @@ const pageVariants = {
 
 const pageTransition = {
   duration: 0.3,
-  ease: 'easeInOut'
+  // Use cubic-bezier easing to satisfy motion type requirements
+  ease: [0.42, 0, 0.58, 1] as [number, number, number, number],
 };
 
 function AnimatedRoutes() {
@@ -297,7 +299,9 @@ export default function App() {
   return (
     <ErrorBoundary>
       <BrowserRouter>
-        <AppContent />
+        <AuthProvider>
+          <AppContent />
+        </AuthProvider>
       </BrowserRouter>
     </ErrorBoundary>
   );

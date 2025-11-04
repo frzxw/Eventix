@@ -35,15 +35,14 @@ jobs:
         run: npm run build
         env:
           VITE_ENVIRONMENT: ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}
-          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
-          VITE_STORAGE_ACCOUNT_NAME: ${{ secrets.VITE_STORAGE_ACCOUNT_NAME }}
-          VITE_APPINSIGHTS_INSTRUMENTATION_KEY: ${{ secrets.VITE_APPINSIGHTS_INSTRUMENTATION_KEY }}
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+          VITE_APPINSIGHTS_CONNECTION_STRING: ${{ secrets.VITE_APPINSIGHTS_CONNECTION_STRING }}
       
       - name: Upload build artifacts
         uses: actions/upload-artifact@v3
         with:
           name: build-${{ github.sha }}
-          path: dist/
+          path: build/
           retention-days: 5
 
   deploy-infrastructure:
@@ -83,7 +82,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: build-${{ github.sha }}
-          path: dist/
+          path: build/
       
       - name: Deploy to Azure Static Web Apps
         uses: Azure/static-web-apps-deploy@v1
@@ -92,10 +91,8 @@ jobs:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           action: 'upload'
           app_location: '/'
-          api_location: 'api'
-          output_location: 'dist'
-          skip_app_build: true
-          skip_api_build: true
+          api_location: 'azure/functions'
+          output_location: 'build'
           deployment_environment: ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}
 
   deploy-backend:
@@ -125,6 +122,15 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
           environment: AzureCloud
+
+      - name: Prepare Functions dependencies and run Prisma migrations
+        run: |
+          cd azure/functions
+          npm ci
+          npm run prisma:generate
+          npx prisma migrate deploy --schema prisma/schema.prisma
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
       
       - name: Deploy Azure Functions
         run: |

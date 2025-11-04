@@ -1,0 +1,338 @@
+// Prisma Database Schema for Eventix Ticketing Platform
+// Database: Azure SQL Database (Serverless Tier)
+// ORM: Prisma
+
+datasource db {
+  provider = "sqlserver"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ============================================================================
+// USERS & AUTHENTICATION
+// ============================================================================
+
+model User {
+  id                String      @id @default(cuid())
+  email             String      @unique
+  passwordHash      String
+  firstName         String
+  lastName          String
+  phone             String?
+  profileImageUrl   String?
+  emailVerified     Boolean     @default(false)
+  emailVerifiedAt   DateTime?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  // Relations
+  orders            Order[]
+  sessions          Session[]
+  reviewedEvents    EventReview[]
+
+  @@index([email])
+  @@index([createdAt])
+}
+
+model Session {
+  id                String      @id @default(cuid())
+  userId            String
+  tokenHash         String      @unique
+  refreshTokenHash  String      @unique
+  deviceInfo        String?
+  ipAddress         String?
+  expiresAt         DateTime
+  createdAt         DateTime    @default(now())
+  revokedAt         DateTime?
+
+  // Relations
+  user              User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+// ============================================================================
+// EVENTS & VENUES
+// ============================================================================
+
+model Event {
+  id                String      @id @default(cuid())
+  title             String
+  description       String
+  // Category (concert, festival, theater, comedy, sports, other)
+  category          String      @db.NVarChar(50)
+  date              DateTime
+  year              Int         // Extracted from date for indexing
+  organizerId       String?
+  // Status (active, cancelled, postponed, completed)
+  status            String      @default("active") @db.NVarChar(20)
+  
+  // Venue Information
+  venueName         String
+  venueAddress      String?
+  venueCity         String
+  venueCapacity     Int
+  
+  // Media
+  imageUrl          String?
+  bannerImageUrl    String?
+  
+  // Metadata
+  tags              String      // JSON array stored as string
+  isFeatured        Boolean     @default(false)
+  viewCount         Int         @default(0)
+  
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  // Relations
+  ticketCategories  TicketCategory[]
+  orders            Order[]
+  reviews           EventReview[]
+
+  @@index([category])
+  @@index([date])
+  @@index([venueCity])
+  @@index([isFeatured])
+  @@index([status])
+  @@index([year])
+}
+
+model EventReview {
+  id                String      @id @default(cuid())
+  eventId           String
+  userId            String
+  rating            Int         // 1-5
+  comment           String?
+  createdAt         DateTime    @default(now())
+
+  // Relations
+  event             Event       @relation(fields: [eventId], references: [id], onDelete: NoAction)
+  user              User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, userId])
+  @@index([eventId])
+  @@index([userId])
+}
+
+// ============================================================================
+// TICKETS & CATEGORIES
+// ============================================================================
+
+model TicketCategory {
+  id                String      @id @default(cuid())
+  eventId           String
+  name              String      // GENERAL, VIP, CAT1, etc.
+  displayName       String
+  description       String?
+  price             Decimal     @db.Decimal(10, 2)
+  currency          String      @default("IDR")
+  
+  // Availability
+  quantityTotal     Int
+  quantitySold      Int         @default(0)
+  
+  // Metadata
+  benefits          String      // JSON array stored as string
+  sortOrder         Int         @default(0)
+  
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  // Relations
+  event             Event       @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  tickets           Ticket[]
+
+  @@index([eventId])
+}
+
+model Ticket {
+  id                String      @id @default(cuid())
+  ticketNumber      String      @unique
+  orderId           String
+  eventId           String
+  categoryId        String
+  
+  // QR Code & Barcode
+  qrCodeUrl         String?     // URL to QR code image in blob storage
+  qrCodeData        String      @unique // Raw QR code data for scanning
+  barcodeData       String      @unique
+  
+  // Status
+  // Status (valid, used, cancelled, transferred)
+  status            String      @default("valid") @db.NVarChar(20)
+  usedAt            DateTime?
+  scannedBy         String?     // Security personnel identifier
+  
+  // Transfer
+  transferredToEmail String?
+  transferredAt     DateTime?
+  originalOrderId   String?     // Original order before transfer
+  
+  createdAt         DateTime    @default(now())
+
+  // Relations
+  order             Order       @relation(fields: [orderId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  category          TicketCategory @relation(fields: [categoryId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([orderId])
+  @@index([eventId])
+  @@index([status])
+  @@index([qrCodeData])
+}
+
+// ============================================================================
+// ORDERS & PAYMENTS
+// ============================================================================
+
+model Order {
+  id                String      @id @default(cuid())
+  orderNumber       String      @unique // EVX-2025-XXXXX
+  userId            String
+  eventId           String
+  
+  // Booking Status (pending, confirmed, cancelled, refunded)
+  status            String      @default("pending") @db.NVarChar(20)
+  
+  // Attendee Information
+  attendeeFirstName String
+  attendeeLastName  String
+  attendeeEmail     String
+  attendeePhone     String
+  
+  // Pricing
+  subtotal          Decimal     @db.Decimal(10, 2)
+  serviceFee        Decimal     @db.Decimal(10, 2) @default(0)
+  processingFee     Decimal     @db.Decimal(10, 2) @default(0)
+  tax               Decimal     @db.Decimal(10, 2) @default(0)
+  discount          Decimal     @db.Decimal(10, 2) @default(0)
+  totalAmount       Decimal     @db.Decimal(10, 2)
+  currency          String      @default("IDR")
+  
+  // Promo Code
+  promoCodeUsed     String?
+  
+  // Payment
+  paymentMethod     String?     // credit_card, bank_transfer, e_wallet, etc.
+  // Payment Status (pending, processing, completed, failed, refunded)
+  paymentStatus     String      @default("pending") @db.NVarChar(20)
+  paymentReference  String?     // Payment gateway reference
+  paidAt            DateTime?
+  
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  expiresAt         DateTime?   // Order expiration for payment
+
+  // Relations
+  user              User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event             Event       @relation(fields: [eventId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  tickets           Ticket[]
+  paymentDetails    PaymentLog[]
+
+  @@index([userId])
+  @@index([eventId])
+  @@index([status])
+  @@index([paymentStatus])
+  @@index([orderNumber])
+  @@index([createdAt])
+}
+
+model PaymentLog {
+  id                String      @id @default(cuid())
+  orderId           String
+  
+  paymentMethod     String
+  amount            Decimal     @db.Decimal(10, 2)
+  currency          String
+  // Payment Status (pending, processing, completed, failed, refunded)
+  status            String      @db.NVarChar(20)
+  
+  gatewayReference  String?
+  gatewayResponse   String?     // JSON response from payment gateway
+  
+  errorMessage      String?
+  
+  createdAt         DateTime    @default(now())
+
+  // Relations
+  order             Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@index([status])
+}
+
+// ============================================================================
+// PROMO CODES
+// ============================================================================
+
+model PromoCode {
+  id                String      @id @default(cuid())
+  code              String      @unique
+  
+  description       String?
+  // DiscountType (percentage, fixed_amount)
+  discountType      String      @db.NVarChar(20)
+  discountValue     Decimal     @db.Decimal(10, 2)
+  
+  maxUsageCount     Int?        // Null = unlimited
+  usageCount        Int         @default(0)
+  
+  maxUsagePerUser   Int         @default(1)
+  
+  // Restrictions
+  minimumOrderAmount Decimal?   @db.Decimal(10, 2)
+  // JSON array of categories (string[]). Empty = all
+  applicableCategories String?
+  
+  // Validity
+  validFrom         DateTime
+  validUntil        DateTime
+  isActive          Boolean     @default(true)
+  
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  @@index([code])
+  @@index([isActive])
+  @@index([validFrom])
+  @@index([validUntil])
+}
+
+// ============================================================================
+// AUDIT & LOGGING
+// ============================================================================
+
+model AuditLog {
+  id                String      @id @default(cuid())
+  action            String      // create, update, delete, etc.
+  resourceType      String      // Event, Order, User, etc.
+  resourceId        String
+  userId            String?
+  
+  changes           String?     // JSON of before/after
+  ipAddress         String?
+  userAgent         String?
+  
+  createdAt         DateTime    @default(now())
+
+  @@index([resourceType])
+  @@index([resourceId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model SystemLog {
+  id                String      @id @default(cuid())
+  level             String      // info, warn, error, debug
+  message           String
+  context           String?     // JSON context data
+  
+  createdAt         DateTime    @default(now())
+
+  @@index([level])
+  @@index([createdAt])
+}

@@ -270,7 +270,7 @@ function TicketCategoryCard({ category, quantity, onIncrement, onDecrement }: Ti
 
             {/* Benefits */}
             <div className="space-y-2 mb-4">
-              {category.benefits.map((benefit, index) => (
+              {category.benefits?.map((benefit, index) => (
                 <div key={index} className="flex items-start gap-2 text-sm text-[var(--text-secondary)]">
                   <Check className="w-4 h-4 text-[var(--primary-500)] mt-0.5 flex-shrink-0" />
                   <span>{benefit}</span>

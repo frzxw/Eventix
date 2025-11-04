@@ -1,0 +1,13 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "node",
+    "JWT_SECRET": "replace-with-strong-secret",
+    "JWT_REFRESH_SECRET": "replace-with-strong-refresh-secret",
+    "JWT_EXPIRY": "15m",
+    "JWT_REFRESH_EXPIRY": "7d",
+    "BCRYPT_ROUNDS": "12",
+    "DATABASE_URL": "Server=your-sql-server.database.windows.net,1433;Database=eventix-db;User Id=sqladmin;Password=<Password>;Encrypt=true;TrustServerCertificate=false;Connection Timeout=30;"
+  }
+}

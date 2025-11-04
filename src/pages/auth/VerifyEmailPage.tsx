@@ -3,7 +3,7 @@ import { motion } from 'motion/react';
 import { useNavigate, useLocation, useSearchParams, Link } from 'react-router-dom';
 import { Mail, CheckCircle2, Send, Loader2, ArrowLeft } from 'lucide-react';
 import { Button } from '../../components/ui/button';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 
 export function VerifyEmailPage() {
   const navigate = useNavigate();

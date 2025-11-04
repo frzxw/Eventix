@@ -1,0 +1,15 @@
+{
+  "version": "2.0",
+  "extensions": {
+    "http": {
+      "routePrefix": "",
+      "cors": {
+        "allowedOrigins": [
+          "http://localhost:5173",
+          "https://*.azurestaticapps.net"
+        ],
+        "supportCredentials": true
+      }
+    }
+  }
+}

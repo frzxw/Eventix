@@ -3,7 +3,13 @@
  * Handles all HTTP communication with Azure Functions backend
  */
 
-import axios, { AxiosInstance, AxiosError, AxiosRequestConfig } from 'axios';
+import axios, {
+  AxiosInstance,
+  AxiosError,
+  AxiosRequestConfig,
+  InternalAxiosRequestConfig,
+  AxiosResponse,
+} from 'axios';
 import { API, AUTH, ENVIRONMENT } from '../constants';
 import { logger } from './logger';
 
@@ -32,7 +38,7 @@ class AzureApiClient {
 
     // Request interceptor - add auth token
     this.client.interceptors.request.use(
-      (config: AxiosRequestConfig) => {
+      (config: InternalAxiosRequestConfig) => {
         const token = this.getAuthToken();
         if (token && config.headers) {
           config.headers.Authorization = `Bearer ${token}`;
@@ -44,7 +50,7 @@ class AzureApiClient {
 
     // Response interceptor - handle auth errors and retries
     this.client.interceptors.response.use(
-      (response: unknown) => {
+      (response: AxiosResponse) => {
         // Reset circuit breaker on success
         this.circuitBreakerFailures = 0;
         return response;

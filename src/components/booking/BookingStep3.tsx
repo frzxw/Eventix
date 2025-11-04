@@ -22,7 +22,7 @@ import type { Event } from '../../lib/types';
 import type { TicketSelection } from './BookingStep1';
 import type { AttendeeInfo } from './BookingStep2';
 import { formatCurrency } from '../../lib/utils';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 
 interface BookingStep3Props {
   event: Event;

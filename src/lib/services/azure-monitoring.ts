@@ -33,10 +33,9 @@ class AzureMonitoring {
 
     try {
       // Dynamic import to avoid bundling issues
-      const { ApplicationInsights, AnalyticsPluginIdentifier } = await import(
-        '@azure/applicationinsights-web'
+      const { ApplicationInsights } = await import(
+        '@microsoft/applicationinsights-web'
       );
-      const { AppInsightsErrorHandler } = await import('@azure/applicationinsights-web');
 
       const appInsights = new ApplicationInsights({
         config: {

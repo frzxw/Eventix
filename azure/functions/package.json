@@ -1,0 +1,29 @@
+{
+  "name": "@eventix/functions",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Eventix Azure Functions (Node.js v18, TypeScript)",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "func start --javascript",
+    "start:dev": "func start --typescript",
+    "prisma:copy": "node -e \"require('fs').mkdirSync('prisma',{recursive:true});require('fs').copyFileSync('../../prisma/schema.prisma','prisma/schema.prisma')\"",
+    "prisma:generate": "npm run prisma:copy && prisma generate --schema prisma/schema.prisma",
+    "postinstall": "npm run prisma:generate"
+  },
+  "dependencies": {
+    "@azure/functions": "^4.4.0",
+    "@prisma/client": "^5.22.0",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.2",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/uuid": "^10.0.0",
+    "prisma": "^5.19.0",
+    "typescript": "^5.6.3"
+  }
+}

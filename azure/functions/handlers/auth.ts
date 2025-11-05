@@ -1,6 +1,3 @@
-/**
- * Authentication Handlers - PRODUCTION READY
- */
 import { HttpRequest, HttpResponseInit } from '@azure/functions';
 import prisma from '../prisma';
 import {

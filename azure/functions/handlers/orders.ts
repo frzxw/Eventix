@@ -1,6 +1,3 @@
-/**
- * Orders/Bookings Handlers - Production (Prisma + QR)
- */
 import { HttpRequest, HttpResponseInit } from '@azure/functions';
 import prisma from '../prisma';
 import { extractTokenFromHeader, verifyAccessToken } from '../utils/auth';

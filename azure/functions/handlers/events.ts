@@ -1,6 +1,3 @@
-/**
- * Events API Handlers - Production (Prisma + Azure SQL)
- */
 import { HttpRequest, HttpResponseInit } from '@azure/functions';
 import prisma from '../prisma';
 

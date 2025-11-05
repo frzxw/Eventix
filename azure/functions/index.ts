@@ -55,7 +55,7 @@ import {
 
 // Route handlers map
 const routeHandlers: RouteHandlersMap = {
-  // Authentication (production)
+  // Authentication
   "POST /api/auth/signup": adaptHandler(signupHandler),
   "POST /api/auth/login": adaptHandler(loginHandler),
   "POST /api/auth/verify-email": adaptHandler(verifyEmailHandler),
@@ -63,7 +63,7 @@ const routeHandlers: RouteHandlersMap = {
   "POST /api/auth/logout": adaptHandler(logoutHandler),
   "POST /api/auth/refresh-token": adaptHandler(refreshTokenHandler),
 
-  // Events (production)
+  // Events
   "GET /api/events": adaptHandler(listEventsHandler),
   "GET /api/events/:id": adaptHandler(getEventHandler),
   "GET /api/events/featured": adaptHandler(featuredEventsHandler),

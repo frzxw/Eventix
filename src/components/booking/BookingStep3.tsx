@@ -23,6 +23,7 @@ import type { TicketSelection } from './BookingStep1';
 import type { AttendeeInfo } from './BookingStep2';
 import { formatCurrency } from '../../lib/utils';
 import { toast } from 'sonner';
+import { apiClient } from '@/lib/services/api-client';
 
 interface BookingStep3Props {
   event: Event;
@@ -51,13 +52,74 @@ export function BookingStep3({ event, selections, attendeeInfo, onComplete, onBa
     }
 
     setIsProcessing(true);
-    
-    // Simulate payment processing
-    setTimeout(() => {
-      const orderId = `ORD-${Date.now()}`;
+    try {
+      // 1) Create order (prefer Orders API; fallback to Bookings API)
+      const orderPayload = {
+        eventId: event.id,
+        tickets: selections.map((s) => ({ categoryId: s.categoryId, quantity: s.quantity })),
+        attendeeInfo: {
+          firstName: attendeeInfo.firstName,
+          lastName: attendeeInfo.lastName,
+          email: attendeeInfo.email,
+          phone: attendeeInfo.phone,
+        },
+        paymentMethod,
+      } as const;
+
+      // Try Orders API first
+      let orderId: string | undefined;
+      let createErr: string | undefined;
+      const createRes = await apiClient.orders.create(orderPayload as any);
+      if (createRes.error) {
+        createErr = createRes.error;
+      } else if (createRes.data) {
+        const d: any = createRes.data;
+        orderId = d.orderId || d.id || d.order?.id || d.bookingId;
+        // Optional: handle payment URL if provided
+        if (d.paymentUrl && typeof d.paymentUrl === 'string' && paymentMethod !== 'credit-card') {
+          // If gateway URL is returned for non-card flows, open it in a new tab
+          window.open(d.paymentUrl, '_blank', 'noopener,noreferrer');
+        }
+      }
+
+      // Fallback to Bookings API if Orders API failed
+      if (!orderId) {
+        const bookingRes = await apiClient.bookings.create({
+          eventId: event.id,
+          items: selections.map((s) => ({ categoryId: s.categoryId, quantity: s.quantity })),
+          customerDetails: {
+            firstName: attendeeInfo.firstName,
+            lastName: attendeeInfo.lastName,
+            email: attendeeInfo.email,
+            phone: attendeeInfo.phone,
+            country: 'ID',
+          },
+        });
+        if (bookingRes.error) {
+          throw new Error(bookingRes.error || createErr || 'Failed to create order');
+        }
+        const bd: any = bookingRes.data;
+        orderId = bd?.orderId || bd?.id || bd?.order?.id || bd?.bookingId;
+      }
+
+      if (!orderId) throw new Error('Unable to determine order ID');
+
+      // 2) Confirm order (simulate payment reference if needed)
+      const paymentReference = `PAY-${Date.now()}-${Math.floor(Math.random() * 1e6).toString().padStart(6, '0')}`;
+      const confirmRes = await apiClient.orders.confirm(orderId, paymentReference);
+      if (confirmRes?.error) {
+        // If confirm not available (e.g., only bookings API), continue without blocking
+        console.warn('Order confirm failed or unsupported, proceeding:', confirmRes.error);
+      }
+
       toast.success('Payment successful! Redirecting to your tickets...');
       onComplete(orderId);
-    }, 2000);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Payment failed';
+      toast.error(message);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (

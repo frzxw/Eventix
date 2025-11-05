@@ -1,49 +1,108 @@
 import { motion } from 'motion/react';
-import { useLocation } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { WalletTicket } from '../components/tickets/WalletTicket';
-import { mockEvents } from '../lib/mock-data';
 import type { Ticket } from '../lib/types';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Ticket as TicketIcon, Clock, CheckCircle2 } from 'lucide-react';
+import { apiClient } from '@/lib/services/api-client';
+import { mapApiTickets } from '@/lib/mappers/tickets';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { toast } from 'sonner';
 
 export function MyTicketsPage() {
   const location = useLocation();
-  const orderId = location.state?.orderId || 'ORD-1234567890';
-  const eventId = location.state?.eventId || 'evt-001';
-  
-  const event = mockEvents.find((e) => e.id === eventId) || mockEvents[0];
+  const navigate = useNavigate();
+  const orderId = location.state?.orderId as string | undefined;
+  const [tickets, setTickets] = useState<Ticket[] | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Mock tickets for demonstration - mix of upcoming, past, and used
-  const mockTickets: Ticket[] = [
-    {
-      id: 'TKT-2025-001',
-      orderId: orderId,
-      eventId: event.id,
-      eventTitle: event.title,
-      eventDate: event.date,
-      eventTime: event.time,
-      venue: event.venue.name,
-      category: 'VIP Package',
-      seat: 'A12',
-      qrCode: '',
-      barcode: 'EVT2025071500001',
-      customerName: 'Budi Santoso',
-      status: 'valid',
-    },
-    // You can add more tickets here for demonstration
-  ];
+  useEffect(() => {
+    let mounted = true;
+    async function load() {
+      setLoading(true);
+      setError(null);
+      try {
+        if (orderId) {
+          const res = await apiClient.tickets.getByOrderId(orderId);
+          if (!mounted) return;
+          if (res.error) throw new Error(res.error);
+          const list = Array.isArray(res.data) ? res.data : (res.data as any)?.tickets;
+          setTickets(mapApiTickets(list));
+        } else {
+          const res = await apiClient.tickets.getMine();
+          if (!mounted) return;
+          if (res.error) throw new Error(res.error);
+          const list = (res.data as any)?.tickets ?? res.data;
+          setTickets(mapApiTickets(list));
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to load tickets';
+        setError(message);
+        toast.error(message);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    }
+    load();
+    return () => { mounted = false; };
+  }, [orderId]);
 
-  const upcomingTickets = mockTickets.filter(t => {
-    const ticketDate = new Date(t.eventDate);
-    const today = new Date();
-    return ticketDate >= today && t.status === 'valid';
-  });
+  const upcomingTickets = useMemo(() => {
+    const list = tickets ?? [];
+    return list.filter(t => {
+      const ticketDate = new Date(t.eventDate);
+      const today = new Date();
+      return ticketDate >= today && t.status === 'valid';
+    });
+  }, [tickets]);
 
-  const pastTickets = mockTickets.filter(t => {
-    const ticketDate = new Date(t.eventDate);
-    const today = new Date();
-    return ticketDate < today || t.status === 'used';
-  });
+  const pastTickets = useMemo(() => {
+    const list = tickets ?? [];
+    return list.filter(t => {
+      const ticketDate = new Date(t.eventDate);
+      const today = new Date();
+      return ticketDate < today || t.status === 'used';
+    });
+  }, [tickets]);
+
+  if (loading) return <LoadingSpinner fullScreen message="Loading your tickets..." />;
+  if (error) {
+    return (
+      <div className="container mx-auto px-4 py-20 text-center">
+        <h1 className="text-3xl mb-4" style={{ fontWeight: 'var(--font-weight-medium)' }}>Unable to load tickets</h1>
+        <p className="text-[var(--text-secondary)] mb-6">{error}</p>
+        <button
+          onClick={() => navigate('/discover')}
+          className="text-[var(--primary-400)] hover:text-[var(--primary-300)] transition-smooth"
+        >
+          Browse Events
+        </button>
+      </div>
+    );
+  }
+
+  if (!tickets || tickets.length === 0) {
+    return (
+      <div className="min-h-screen pb-20">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-5xl py-8 sm:py-12 text-center">
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl mb-3" style={{ fontWeight: 'var(--font-weight-medium)' }}>
+            My Tickets
+          </h1>
+          <p className="text-[var(--text-secondary)] text-sm sm:text-base max-w-2xl mx-auto mb-8">
+            You don’t have any tickets yet. Explore events and book your next experience!
+          </p>
+          <a
+            href="/discover"
+            className="inline-flex items-center justify-center px-6 py-3 rounded-full bg-gradient-to-r from-[var(--primary-500)] to-[var(--accent-500)] text-white hover:opacity-90 transition-all duration-300 shadow-xl shadow-[var(--primary-500)]/20"
+          >
+            Browse Events
+          </a>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen pb-20">

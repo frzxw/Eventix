@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { EventCard } from '../components/events/EventCard';
 import { FilterSidebar } from '../components/events/FilterSidebar';
-import { mockEvents } from '../lib/mock-data';
 import { Button } from '../components/ui/button';
 import { Filter } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -15,6 +14,10 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '../components/ui/pagination';
+import { apiClient } from '@/lib/services/api-client';
+import { mapApiEvents } from '@/lib/mappers/events';
+import type { Event } from '@/lib/types';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
 
 export function DiscoverPage() {
   const navigate = useNavigate();
@@ -24,32 +27,68 @@ export function DiscoverPage() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const eventsPerPage = 9;
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [events, setEvents] = useState<Event[]>([]);
+  const [totalPages, setTotalPages] = useState<number>(1);
+  const [total, setTotal] = useState<number>(0);
 
   // Handle category from URL params
   useEffect(() => {
     const categoryParam = searchParams.get('category');
     const searchParam = searchParams.get('search');
+    const pageParam = parseInt(searchParams.get('page') || '1', 10);
     if (categoryParam) {
       setSelectedCategory(categoryParam);
     }
     if (searchParam) {
       setSearchQuery(searchParam);
     }
+    if (!Number.isNaN(pageParam) && pageParam > 0) {
+      setCurrentPage(pageParam);
+    }
   }, [searchParams]);
+
+  // Fetch events
+  useEffect(() => {
+    let mounted = true;
+    async function load() {
+      setLoading(true);
+      setError(null);
+      // Use server-side pagination for both search and category filters
+      const res = await apiClient.events.getAll({
+        category: selectedCategory || undefined,
+        search: searchQuery || undefined,
+        page: currentPage,
+        limit: eventsPerPage,
+      });
+      if (!mounted) return;
+      if (res.error) setError(res.error);
+      // Support both array and object shapes
+      const payload: any = res.data;
+      const list = Array.isArray(payload)
+        ? payload
+        : Array.isArray(payload?.events)
+        ? payload.events
+        : Array.isArray(payload?.data)
+        ? payload.data
+        : [];
+      setEvents(mapApiEvents(list));
+      const tp = (Array.isArray(payload) ? undefined : (payload?.totalPages || payload?.total_pages));
+      const t = (Array.isArray(payload) ? undefined : (payload?.total || payload?.total_count));
+      if (tp) setTotalPages(Number(tp)); else setTotalPages( Math.max(1, Math.ceil((t ?? list.length) / eventsPerPage)) );
+      if (typeof t === 'number') setTotal(t); else setTotal(list.length);
+      setLoading(false);
+    }
+    load();
+    return () => { mounted = false; };
+  }, [selectedCategory, searchQuery, currentPage]);
 
   const handleEventClick = (eventId: string) => {
     navigate(`/event/${eventId}`);
   };
 
-  // Filter events based on category and search
-  const filteredEvents = mockEvents.filter((event) => {
-    const matchesCategory = !selectedCategory || event.category === selectedCategory;
-    const matchesSearch = !searchQuery || 
-      event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      event.artist.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      event.venue.city.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCategory && matchesSearch;
-  });
+  const filteredEvents = events;
 
   return (
     <section className="py-8 sm:py-12 min-h-screen">
@@ -108,6 +147,14 @@ export function DiscoverPage() {
 
           {/* Events Grid with Pagination */}
           <div className="lg:col-span-3 space-y-8">
+            {loading && (
+              <LoadingSpinner message="Loading events..." />
+            )}
+            {!loading && error && (
+              <div className="glass rounded-3xl border border-[var(--border-glass)] p-8 text-center text-[var(--text-secondary)]">
+                {error}
+              </div>
+            )}
             {filteredEvents.length === 0 ? (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -162,7 +209,7 @@ export function DiscoverPage() {
             )}
 
             {/* Pagination */}
-            {filteredEvents.length > eventsPerPage && (
+            {totalPages > 1 && (
               <div className="flex justify-center">
                 <Pagination>
                   <PaginationContent className="glass rounded-full p-2">
@@ -170,7 +217,11 @@ export function DiscoverPage() {
                       <PaginationPrevious
                         onClick={() => {
                           if (currentPage > 1) {
-                            setCurrentPage(currentPage - 1);
+                            const next = currentPage - 1;
+                            setCurrentPage(next);
+                            const sp = new URLSearchParams(window.location.search);
+                            sp.set('page', String(next));
+                            navigate(`/discover?${sp.toString()}`, { replace: true });
                             window.scrollTo({ top: 0, behavior: 'smooth' });
                           }
                         }}
@@ -183,14 +234,14 @@ export function DiscoverPage() {
                     </PaginationItem>
 
                     {Array.from(
-                      { length: Math.ceil(filteredEvents.length / eventsPerPage) },
+                      { length: totalPages },
                       (_, i) => i + 1
                     ).map((page) => {
-                      const totalPages = Math.ceil(filteredEvents.length / eventsPerPage);
+                      const totalPagesLocal = totalPages;
                     
                       if (
                         page === 1 ||
-                        page === totalPages ||
+                        page === totalPagesLocal ||
                         (page >= currentPage - 1 && page <= currentPage + 1)
                       ) {
                         return (
@@ -198,6 +249,9 @@ export function DiscoverPage() {
                             <PaginationLink
                               onClick={() => {
                                 setCurrentPage(page);
+                                const sp = new URLSearchParams(window.location.search);
+                                sp.set('page', String(page));
+                                navigate(`/discover?${sp.toString()}`, { replace: true });
                                 window.scrollTo({ top: 0, behavior: 'smooth' });
                               }}
                               isActive={currentPage === page}
@@ -227,14 +281,17 @@ export function DiscoverPage() {
                     <PaginationItem>
                       <PaginationNext
                         onClick={() => {
-                          const totalPages = Math.ceil(filteredEvents.length / eventsPerPage);
                           if (currentPage < totalPages) {
-                            setCurrentPage(currentPage + 1);
+                            const next = currentPage + 1;
+                            setCurrentPage(next);
+                            const sp = new URLSearchParams(window.location.search);
+                            sp.set('page', String(next));
+                            navigate(`/discover?${sp.toString()}`, { replace: true });
                             window.scrollTo({ top: 0, behavior: 'smooth' });
                           }
                         }}
                         className={`rounded-full ${
-                          currentPage >= Math.ceil(filteredEvents.length / eventsPerPage)
+                          currentPage >= totalPages
                             ? 'opacity-50 cursor-not-allowed pointer-events-none'
                             : 'cursor-pointer hover:bg-[var(--surface-glass-hover)]'
                         }`}

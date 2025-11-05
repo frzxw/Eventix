@@ -112,18 +112,22 @@ export const events = {
   async getAll(params?: {
     category?: string;
     city?: string;
+    search?: string;
     minPrice?: number;
     maxPrice?: number;
     page?: number;
     limit?: number;
+    sort?: "date" | "popularity" | "price";
   }): Promise<{ data?: any[]; error?: string }> {
     const query = new URLSearchParams();
     if (params?.category) query.append("category", params.category);
     if (params?.city) query.append("city", params.city);
+    if (params?.search) query.append("search", params.search);
     if (params?.minPrice) query.append("minPrice", params.minPrice.toString());
     if (params?.maxPrice) query.append("maxPrice", params.maxPrice.toString());
     if (params?.page) query.append("page", params.page.toString());
     if (params?.limit) query.append("limit", params.limit.toString());
+    if (params?.sort) query.append("sort", params.sort);
 
     return request(`/events?${query}`);
   },
@@ -224,6 +228,68 @@ export const tickets = {
       body: { ticketId },
     });
   },
+
+  /**
+   * GET /api/tickets/my-tickets
+   */
+  async getMine(params?: { page?: number; limit?: number }): Promise<{ data?: any; error?: string }> {
+    const query = new URLSearchParams();
+    if (params?.page) query.append("page", String(params.page));
+    if (params?.limit) query.append("limit", String(params.limit));
+    return request(`/tickets/my-tickets?${query.toString()}`);
+  },
+};
+
+/**
+ * Orders API (aligns with production handlers)
+ */
+export const orders = {
+  /**
+   * POST /api/orders/create
+   */
+  async create(data: {
+    eventId: string;
+    tickets: Array<{ categoryId: string; quantity: number }>;
+    attendeeInfo: {
+      firstName: string;
+      lastName: string;
+      email: string;
+      phone: string;
+    };
+    paymentMethod?: string;
+  }): Promise<{ data?: any; error?: string }> {
+    return request("/orders/create", {
+      method: "POST",
+      body: data,
+    });
+  },
+
+  /**
+   * POST /api/orders/:id/confirm
+   */
+  async confirm(orderId: string, paymentReference: string): Promise<{ data?: any; error?: string }> {
+    return request(`/orders/${encodeURIComponent(orderId)}/confirm`, {
+      method: "POST",
+      body: { paymentReference },
+    });
+  },
+
+  /**
+   * GET /api/orders/:id
+   */
+  async getById(orderId: string): Promise<{ data?: any; error?: string }> {
+    return request(`/orders/${encodeURIComponent(orderId)}`);
+  },
+
+  /**
+   * GET /api/orders/my-orders
+   */
+  async getMine(params?: { status?: string; page?: number }): Promise<{ data?: any; error?: string }> {
+    const query = new URLSearchParams();
+    if (params?.status) query.append("status", params.status);
+    if (params?.page) query.append("page", String(params.page));
+    return request(`/orders/my-orders?${query.toString()}`);
+  },
 };
 
 /**
@@ -299,6 +365,7 @@ export const apiClient = {
   events,
   bookings,
   tickets,
+  orders,
   auth,
 };
 

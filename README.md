@@ -1,4 +1,4 @@
-# Eventix - Production-Ready Online Ticketing Platform
+# Eventix - Online Ticketing Platform
 
 A modern, accessible, and fully-featured online ticketing website built with React, TypeScript, Tailwind CSS, and shadcn/ui. Features a dark-first glassmorphic design system with comprehensive token-based theming.
 
@@ -388,7 +388,3 @@ Built with:
 - [shadcn/ui](https://ui.shadcn.com)
 - [Radix UI](https://www.radix-ui.com)
 - [Lucide Icons](https://lucide.dev)
-
----
-
-**Made with ❤️ for event lovers everywhere**

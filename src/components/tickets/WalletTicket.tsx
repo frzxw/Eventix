@@ -12,7 +12,7 @@ interface WalletTicketProps {
 }
 
 export function WalletTicket({ ticket, onAddToWallet, onAddToCalendar, onShare }: WalletTicketProps) {
-  const qrCode = generateQRCode(ticket.id);
+  const qrCode = ticket.qrCode && ticket.qrCode.length > 0 ? ticket.qrCode : generateQRCode(ticket.id);
   
   // Parse date for better formatting
   const eventDate = new Date(ticket.eventDate);

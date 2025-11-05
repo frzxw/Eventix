@@ -1,8 +1,14 @@
-import { useEffect, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { CheckCircle2, Download, Mail, Calendar, MapPin, Ticket, ArrowRight } from 'lucide-react';
+import { CheckCircle2, Download, Mail, Calendar, MapPin, Ticket as TicketIcon, ArrowRight } from 'lucide-react';
 import { Button } from '../components/ui/button';
+import { apiClient } from '@/lib/services/api-client';
+import { toast } from 'sonner';
+import type { Ticket } from '@/lib/types';
+import { mapApiTickets } from '@/lib/mappers/tickets';
+import { WalletTicket } from '@/components/tickets/WalletTicket';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
 
 interface OrderDetails {
   orderId: string;
@@ -23,23 +29,76 @@ interface OrderDetails {
 
 export function OrderConfirmationPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const [orderDetails, setOrderDetails] = useState<OrderDetails | null>(null);
+  const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [ticketsLoading, setTicketsLoading] = useState<boolean>(false);
+  const orderId = useMemo(() => searchParams.get('orderId') || (location.state as any)?.orderId || '', [searchParams, location.state]);
 
   useEffect(() => {
-    // In a real app, this would fetch order details from the backend
-    // For now, we'll get it from localStorage or URL params
-    const storedOrder = localStorage.getItem('lastOrder');
-    if (storedOrder) {
-      setOrderDetails(JSON.parse(storedOrder));
-    } else {
-      // If no order found, redirect to home after 2 seconds
-      const timeout = setTimeout(() => {
+    let mounted = true;
+    async function load() {
+      if (!orderId) {
+        toast.error('Missing order reference');
         navigate('/');
-      }, 2000);
-      return () => clearTimeout(timeout);
+        return;
+      }
+      try {
+        const res = await apiClient.orders.getById(orderId);
+        if (!mounted) return;
+        if (res.error) throw new Error(res.error);
+        const d: any = res.data;
+        const order = d?.order ?? d;
+        const event = order?.event ?? d?.event;
+        const items = order?.items ?? order?.tickets ?? d?.tickets ?? [];
+
+        const mapped: OrderDetails = {
+          orderId: order?.order_number || order?.id || orderId,
+          eventTitle: event?.title || event?.name || d?.eventTitle || 'Event',
+          eventDate: event?.date || d?.eventDate || new Date().toISOString(),
+          eventTime: event?.time || d?.eventTime || '19:00',
+          venueName: event?.venue_name || event?.venue?.name || 'Venue',
+          venueCity: event?.venue_city || event?.venue?.city || '',
+          tickets: items.map((it: any) => ({
+            category: it?.name || it?.category || it?.category_name || 'General',
+            quantity: Number(it?.quantity ?? 1),
+            price: Number(it?.price ?? it?.pricePerTicket ?? 0),
+          })),
+          totalAmount: Number(order?.total_amount ?? order?.total ?? d?.totalAmount ?? 0),
+          email: order?.attendee_email || order?.email || d?.email || '',
+          confirmationSentAt: new Date().toISOString(),
+        };
+        setOrderDetails(mapped);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Unable to load order details';
+        toast.error(message);
+        navigate('/');
+      }
     }
-  }, [navigate]);
+    load();
+    return () => { mounted = false; };
+  }, [orderId, navigate]);
+
+  // Fetch tickets for this order to display inline
+  useEffect(() => {
+    let mounted = true;
+    async function loadTickets() {
+      if (!orderId) return;
+      setTicketsLoading(true);
+      const res = await apiClient.tickets.getByOrderId(orderId);
+      if (!mounted) return;
+      if (res.error) {
+        // soft-fail: keep page usable
+        setTickets([]);
+      } else {
+        setTickets(mapApiTickets(res.data as any[]));
+      }
+      setTicketsLoading(false);
+    }
+    loadTickets();
+    return () => { mounted = false; };
+  }, [orderId]);
 
   if (!orderDetails) {
     return (
@@ -52,9 +111,8 @@ export function OrderConfirmationPage() {
   }
 
   const handleDownloadTickets = () => {
-    // In a real app, this would download the PDF tickets
-    console.log('Downloading tickets for order:', orderDetails.orderId);
-    navigate('/my-tickets');
+    // Redirect to My Tickets for now; can be enhanced to fetch PDFs per ticket
+    navigate('/my-tickets', { state: { orderId: orderDetails?.orderId } });
   };
 
   const handleViewTickets = () => {
@@ -130,30 +188,26 @@ export function OrderConfirmationPage() {
               </div>
             </div>
 
-            {/* Tickets */}
+            {/* Tickets (Inline Display) */}
             <div className="mb-6 pb-6 border-b border-[var(--border-default)]">
               <h3 className="mb-4">Your Tickets</h3>
-              <div className="space-y-3">
-                {orderDetails.tickets.map((ticket, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center justify-between p-4 rounded-xl bg-[var(--surface-glass)]/30"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[var(--primary-500)]/20 to-[var(--primary-600)]/20 border border-[var(--primary-500)]/30 flex items-center justify-center">
-                        <Ticket className="w-5 h-5 text-[var(--primary-400)]" />
-                      </div>
-                      <div>
-                        <p style={{ fontWeight: 'var(--font-weight-medium)' }}>{ticket.category}</p>
-                        <p className="text-sm text-[var(--text-secondary)]">Quantity: {ticket.quantity}</p>
-                      </div>
-                    </div>
-                    <p style={{ fontWeight: 'var(--font-weight-semibold)' }}>
-                      Rp {(ticket.price * ticket.quantity).toLocaleString('id-ID')}
-                    </p>
-                  </div>
-                ))}
-              </div>
+              {ticketsLoading && (
+                <div className="flex justify-center py-6">
+                  <LoadingSpinner message="Loading tickets..." />
+                </div>
+              )}
+              {!ticketsLoading && tickets.length === 0 && (
+                <div className="glass rounded-2xl p-4 border border-[var(--border-glass)] text-[var(--text-secondary)]">
+                  Tickets will appear here once generated.
+                </div>
+              )}
+              {!ticketsLoading && tickets.length > 0 && (
+                <div className="space-y-6">
+                  {tickets.map((t) => (
+                    <WalletTicket key={t.id} ticket={t} />
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Total */}
@@ -202,7 +256,7 @@ export function OrderConfirmationPage() {
             onClick={handleViewTickets}
             className="flex-1 h-12 bg-gradient-to-r from-[var(--primary-500)] to-[var(--primary-600)] hover:from-[var(--primary-600)] hover:to-[var(--primary-700)] text-white"
           >
-            <Ticket className="w-5 h-5 mr-2" />
+            <TicketIcon className="w-5 h-5 mr-2" />
             View My Tickets
             <ArrowRight className="w-5 h-5 ml-2" />
           </Button>

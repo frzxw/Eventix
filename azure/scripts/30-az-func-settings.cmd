@@ -18,7 +18,7 @@ az functionapp config appsettings set --name %AZ_FUNCTIONAPP% --resource-group %
   DATABASE_URL="@Microsoft.KeyVault(SecretUri=https://%AZ_KEYVAULT%.vault.azure.net/secrets/database-connection-string/)" ^
   JWT_SECRET="@Microsoft.KeyVault(SecretUri=https://%AZ_KEYVAULT%.vault.azure.net/secrets/jwt-secret/)" ^
   JWT_REFRESH_SECRET="@Microsoft.KeyVault(SecretUri=https://%AZ_KEYVAULT%.vault.azure.net/secrets/jwt-refresh-secret/)" ^
-  APPINSIGHTS_CONNECTION_STRING="@Microsoft.KeyVault(SecretUri=https://%AZ_KEYVAULT%.vault.azure.net/secrets/appinsights-connection-string/)" || exit /b 1
+  APPLICATIONINSIGHTS_CONNECTION_STRING="@Microsoft.KeyVault(SecretUri=https://%AZ_KEYVAULT%.vault.azure.net/secrets/appinsights-connection-string/)" || exit /b 1
 
 echo Enabling CORS placeholder (run 40-az-cors after SWA deploy for real URL) ...
 az functionapp cors add --resource-group %AZ_RG% --name %AZ_FUNCTIONAPP% --allowed-origins https://%AZ_SWA%.azurestaticapps.net || rem continue if not provisioned yet

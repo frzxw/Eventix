@@ -8,6 +8,8 @@ REM   run-all.bat https://your-swa.azurestaticapps.net  # also sets CORS
 REM Optional env:
 REM   set RUN_MIGRATIONS=true
 REM   set DATABASE_URL=...   (required when RUN_MIGRATIONS=true)
+REM   set DEPLOY_FUNCTIONS=true
+REM   set ALLOW_MY_IP=true
 
 set SWA_URL=%1
 
@@ -16,6 +18,12 @@ call "%~dp0\00-az-variables.cmd" || goto :fail
 echo.
 echo [1/4] Provisioning core Azure resources...
 call "%~dp0\10-az-provision-core.cmd" || goto :fail
+
+if /I "%ALLOW_MY_IP%"=="true" (
+  echo.
+  echo [1b/4] Allowing current public IP for Azure SQL firewall...
+  call "%~dp0\15-az-sql-allow-ip.cmd" || rem continue on best-effort
+)
 
 echo.
 echo [2/4] Creating Key Vault secrets and granting access...
@@ -39,6 +47,12 @@ if /I "%RUN_MIGRATIONS%"=="true" (
     echo [4/4] Running Prisma migrate deploy against target database...
     call "%~dp0\50-prisma-migrate.cmd" || goto :fail
   )
+)
+
+if /I "%DEPLOY_FUNCTIONS%"=="true" (
+  echo.
+  echo [Final] Deploying Azure Functions code ...
+  call "%~dp0\60-func-deploy.cmd" || goto :fail
 )
 
 echo.

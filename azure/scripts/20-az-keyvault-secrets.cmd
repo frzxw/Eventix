@@ -3,6 +3,10 @@ setlocal
 call "%~dp0\00-az-variables.cmd"
 
 REM Construct DATABASE_URL for SQL Login (adjust if using AAD)
+if "%AZ_SQLPASSWORD%"=="" (
+  echo ERROR: AZ_SQLPASSWORD is empty. Set it in 00-az-variables.local.cmd and re-run.
+  exit /b 1
+)
 set DATABASE_URL=Server=tcp:%AZ_SQLSERVER%.database.windows.net,1433;Initial Catalog=%AZ_SQLDB%;User Id=%AZ_SQLADMIN%;Password=%AZ_SQLPASSWORD%;Encrypt=true;TrustServerCertificate=false;Connection Timeout=30;
 
 REM Generate random-ish defaults if not provided (Windows only rough fallback)

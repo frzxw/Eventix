@@ -10,6 +10,9 @@ if not "%AZ_SUBSCRIPTION_ID%"=="" (
   az account set --subscription %AZ_SUBSCRIPTION_ID% || (echo Failed to set subscription && exit /b 1)
 )
 
+REM Ensure Application Insights extension is available (older CLI requires it)
+az extension show --name application-insights >NUL 2>&1 || az extension add --name application-insights || rem continue if built-in
+
 echo Creating resource group %AZ_RG% in %AZ_LOCATION% ...
 az group create --name %AZ_RG% --location %AZ_LOCATION% || exit /b 1
 
@@ -17,6 +20,10 @@ echo Creating storage account %AZ_STORAGE% ...
 az storage account create --name %AZ_STORAGE% --resource-group %AZ_RG% --location %AZ_LOCATION% --sku Standard_LRS || exit /b 1
 
 echo Creating SQL server %AZ_SQLSERVER% ...
+if "%AZ_SQLPASSWORD%"=="" (
+  echo ERROR: AZ_SQLPASSWORD is empty. Please set it in 00-az-variables.local.cmd and re-run.
+  exit /b 1
+)
 az sql server create --name %AZ_SQLSERVER% --resource-group %AZ_RG% --location %AZ_LOCATION% --admin-user %AZ_SQLADMIN% --admin-password %AZ_SQLPASSWORD% || exit /b 1
 
 echo Creating SQL database %AZ_SQLDB% ...

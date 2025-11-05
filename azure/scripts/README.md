@@ -19,6 +19,13 @@ Or include your Static Web App URL to also configure CORS:
 azure\scripts\run-all.bat https://<your-swa>.azurestaticapps.net
 ```
 
+Optional: allow your current public IP for SQL (needed for local Prisma migrations):
+
+```
+set ALLOW_MY_IP=true
+azure\scripts\run-all.bat
+```
+
 Optional: run DB migrations by setting environment variables before the call (or inside your local overrides file):
 
 ```
@@ -69,6 +76,13 @@ Set `DATABASE_URL` in your shell to the production DB connection string (or use 
 ```
 set DATABASE_URL=Server=tcp:<server>.database.windows.net,1433;Initial Catalog=<db>;User Id=<user>;Password=<pwd>;Encrypt=true;TrustServerCertificate=false;Connection Timeout=30;
 azure\scripts\50-prisma-migrate.cmd
+
+Optional: deploy Azure Functions code after configuring settings:
+
+```
+set DEPLOY_FUNCTIONS=true
+azure\scripts\run-all.bat
+```
 ```
 
 ## Notes
@@ -78,3 +92,5 @@ azure\scripts\50-prisma-migrate.cmd
 - The Function App gets a system-assigned identity which is granted `get`/`list` on Key Vault secrets.
 - App settings are wired to Key Vault using `@Microsoft.KeyVault(SecretUri=...)` syntax.
 - Frontend should set `VITE_API_URL` to `https://<functionapp>.azurewebsites.net/api`.
+ - Prisma migrations now run inside the `azure/functions` workspace automatically.
+ - Application Insights setting name used: `APPLICATIONINSIGHTS_CONNECTION_STRING`.

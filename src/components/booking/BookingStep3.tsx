@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { 
   CreditCard, 
@@ -35,6 +36,7 @@ interface BookingStep3Props {
 type PaymentMethod = 'credit-card' | 'bank-transfer' | 'e-wallet';
 
 export function BookingStep3({ event, selections, attendeeInfo, onComplete, onBack }: BookingStep3Props) {
+  const navigate = useNavigate();
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('credit-card');
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -51,13 +53,42 @@ export function BookingStep3({ event, selections, attendeeInfo, onComplete, onBa
     }
 
     setIsProcessing(true);
-    
-    // Simulate payment processing
-    setTimeout(() => {
-      const orderId = `ORD-${Date.now()}`;
-      toast.success('Payment successful! Redirecting to your tickets...');
-      onComplete(orderId);
-    }, 2000);
+    // Prepare order details for confirmation page
+    const orderId = `ORD-${Date.now()}`;
+    try {
+      const totalAmount = selections.reduce((sum, selection) => {
+        const category = event.ticketCategories.find((cat) => cat.id === selection.categoryId);
+        return sum + (category ? category.price * selection.quantity : 0);
+      }, 0) + serviceFee; // include service fee to match displayed total
+
+      const orderDetails = {
+        orderId,
+        eventTitle: event.title,
+        eventDate: event.date,
+        eventTime: event.time,
+        venueName: event.venue.name,
+        venueCity: event.venue.city,
+        tickets: selections.map((selection) => {
+          const category = event.ticketCategories.find((cat) => cat.id === selection.categoryId);
+          return {
+            category: category?.name || '',
+            quantity: selection.quantity,
+            price: category?.price || 0,
+          };
+        }),
+        totalAmount,
+        email: attendeeInfo.email,
+        confirmationSentAt: new Date().toISOString(),
+      };
+
+      localStorage.setItem('lastOrder', JSON.stringify(orderDetails));
+
+      // Redirect to mock payment page to simulate gateway then confirmation
+      navigate(`/payment/mock?orderId=${encodeURIComponent(orderId)}&amount=${encodeURIComponent(total.toFixed(0))}`);
+    } catch (e) {
+      toast.error('Failed to prepare order. Please try again.');
+      setIsProcessing(false);
+    }
   };
 
   return (

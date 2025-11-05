@@ -23,6 +23,7 @@ import { PrivacyPage } from './pages/PrivacyPage';
 import { ContactPage } from './pages/ContactPage';
 import { Toaster } from './components/ui/sonner';
 import { AuthProvider } from '@/context/AuthContext';
+import MockPaymentPage from './pages/MockPaymentPage';
 
 // Animation variants
 const pageVariants = {
@@ -178,6 +179,17 @@ function AnimatedRoutes() {
             transition={pageTransition}
           >
             <OrderConfirmationPage />
+          </motion.div>
+        } />
+        <Route path="/payment/mock" element={
+          <motion.div
+            variants={pageVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            transition={pageTransition}
+          >
+            <MockPaymentPage />
           </motion.div>
         } />
         

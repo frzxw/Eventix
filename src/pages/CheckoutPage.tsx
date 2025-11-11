@@ -3,19 +3,27 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { BookingStep1, type TicketSelection } from '../components/booking/BookingStep1';
 import { BookingStep2, type AttendeeInfo } from '../components/booking/BookingStep2';
 import { BookingStep3 } from '../components/booking/BookingStep3';
-import { mockEvents } from '../lib/mock-data';
+import { LoadingSpinner } from '../components/LoadingSpinner';
+import { useEvent } from '../lib/hooks/useEvent';
 
 type BookingStep = 1 | 2 | 3;
 
 export function CheckoutPage() {
   const { eventId } = useParams<{ eventId: string }>();
   const navigate = useNavigate();
-  
-  const event = mockEvents.find((e) => e.id === eventId);
-  
+  const { event, isLoading, error } = useEvent(eventId);
+
   const [currentStep, setCurrentStep] = useState<BookingStep>(1);
   const [ticketSelections, setTicketSelections] = useState<TicketSelection[]>([]);
   const [attendeeInfo, setAttendeeInfo] = useState<AttendeeInfo | null>(null);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <LoadingSpinner size="lg" message="Loading checkout flow" />
+      </div>
+    );
+  }
 
   if (!event) {
     return (
@@ -24,7 +32,7 @@ export function CheckoutPage() {
           Event Not Found
         </h1>
         <p className="text-[var(--text-secondary)] mb-6">
-          The event you're looking for doesn't exist.
+          {error ?? "The event you're looking for doesn't exist."}
         </p>
         <button
           onClick={() => navigate('/')}

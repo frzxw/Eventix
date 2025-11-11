@@ -1,12 +1,20 @@
-import { useParams, useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { EventDetail } from '../components/events/EventDetail';
-import { mockEvents } from '../lib/mock-data';
+import { LoadingSpinner } from '../components/LoadingSpinner';
+import { useEvent } from '../lib/hooks/useEvent';
 
 export function EventDetailPage() {
   const { eventId } = useParams<{ eventId: string }>();
   const navigate = useNavigate();
-  
-  const event = mockEvents.find((e) => e.id === eventId);
+  const { event, isLoading, error } = useEvent(eventId);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <LoadingSpinner size="lg" message="Loading event details" />
+      </div>
+    );
+  }
 
   if (!event) {
     return (
@@ -15,7 +23,7 @@ export function EventDetailPage() {
           Event Not Found
         </h1>
         <p className="text-[var(--text-secondary)] mb-6">
-          The event you're looking for doesn't exist.
+          {error ?? "The event you're looking for doesn't exist."}
         </p>
         <button
           onClick={() => navigate('/')}

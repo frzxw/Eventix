@@ -19,6 +19,8 @@
  * });
  */
 
+import type { Event } from "@/lib/types";
+
 type ApiResponse<T> = {
   success: boolean;
   data?: T;
@@ -29,7 +31,7 @@ type ApiResponse<T> = {
   totalPages?: number;
 };
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:7071/api";
+const API_BASE_URL = (import.meta.env.VITE_API_URL || "http://localhost:8080").replace(/\/$/, "");
 
 /**
  * Make API request
@@ -48,6 +50,7 @@ async function request<T>(
     const { getAccessToken, getRefreshToken, setTokens, clearTokens } = await import("@/lib/auth");
 
     const accessToken = getAccessToken();
+
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: options.method || "GET",
       headers: {
@@ -116,7 +119,9 @@ export const events = {
     maxPrice?: number;
     page?: number;
     limit?: number;
-  }): Promise<{ data?: any[]; error?: string }> {
+    search?: string;
+    sort?: "date" | "newest";
+  }): Promise<{ data?: { events: Event[]; total: number; page: number; totalPages: number }; error?: string }> {
     const query = new URLSearchParams();
     if (params?.category) query.append("category", params.category);
     if (params?.city) query.append("city", params.city);
@@ -124,32 +129,45 @@ export const events = {
     if (params?.maxPrice) query.append("maxPrice", params.maxPrice.toString());
     if (params?.page) query.append("page", params.page.toString());
     if (params?.limit) query.append("limit", params.limit.toString());
+    if (params?.search) query.append("search", params.search);
+    if (params?.sort) query.append("sort", params.sort);
 
-    return request(`/events?${query}`);
+    const queryString = query.toString();
+    const path = queryString.length > 0 ? `/v1/events?${queryString}` : "/v1/events";
+
+    return request<{ events: Event[]; total: number; page: number; totalPages: number }>(path);
   },
 
   /**
    * GET /api/events/:id
    */
-  async getById(id: string): Promise<{ data?: any; error?: string }> {
-    return request(`/events/${id}`);
+  async getById(id: string): Promise<{ data?: { event: Event; relatedEvents: Event[] }; error?: string }> {
+    return request<{ event: Event; relatedEvents: Event[] }>(`/v1/events/${id}`);
   },
 
   /**
    * GET /api/events/featured
    */
-  async getFeatured(): Promise<{ data?: any[]; error?: string }> {
-    return request("/events/featured");
+  async getFeatured(): Promise<{ data?: Event[]; error?: string }> {
+    const response = await request<{ events: Event[] }>("/v1/events/featured");
+    if (response.error) {
+      return { error: response.error };
+    }
+    return { data: response.data?.events ?? [] };
   },
 
   /**
    * GET /api/search
    */
-  async search(query: string): Promise<{ data?: any[]; error?: string }> {
+  async search(query: string): Promise<{ data?: Event[]; error?: string }> {
     if (!query || query.length < 2) {
       return { data: [] };
     }
-    return request(`/search?q=${encodeURIComponent(query)}`);
+    const response = await request<{ events: Event[] }>(`/v1/events/search?query=${encodeURIComponent(query)}`);
+    if (response.error) {
+      return { error: response.error };
+    }
+    return { data: response.data?.events ?? [] };
   },
 };
 

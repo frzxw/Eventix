@@ -7,6 +7,7 @@ import { loggerOptions } from "./config/logger";
 import { requestContext } from "./middleware/requestContext";
 import { inventoryRoutes } from "./routes/inventory";
 import { checkoutRoutes } from "./routes/checkout";
+import { eventsRoutes } from "./routes/events";
 import { setupApplicationInsights } from "./telemetry/applicationInsights";
 
 export async function buildServer() {
@@ -31,6 +32,7 @@ export async function buildServer() {
   }
 
   await app.register(requestContext);
+  await app.register(eventsRoutes);
   await app.register(inventoryRoutes);
   await app.register(checkoutRoutes);
 

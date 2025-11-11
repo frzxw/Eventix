@@ -1,10 +1,13 @@
-import { useState, useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Search, X, Calendar, MapPin, TrendingUp, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { mockEvents } from '../../lib/mock-data';
+import { apiClient } from '../../lib/services/api-client';
+import { SEARCH as SEARCH_CONFIG } from '../../lib/constants';
 import { Button } from '../ui/button';
 import type { Event } from '../../lib/types';
+import { LoadingSpinner } from '../LoadingSpinner';
 
 interface SearchModalProps {
   isOpen: boolean;
@@ -16,6 +19,8 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
   const [results, setResults] = useState<Event[]>([]);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [trendingSearches] = useState(['Concerts', 'Festivals', 'Jakarta', 'Comedy Shows']);
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
   const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -31,17 +36,49 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
   }, [isOpen]);
 
   useEffect(() => {
-    if (query.trim()) {
-      const filtered = mockEvents.filter((event) =>
-        event.title.toLowerCase().includes(query.toLowerCase()) ||
-        event.artist.toLowerCase().includes(query.toLowerCase()) ||
-        event.venue.city.toLowerCase().includes(query.toLowerCase()) ||
-        event.category.toLowerCase().includes(query.toLowerCase())
-      ).slice(0, 5);
-      setResults(filtered);
-    } else {
+    const trimmed = query.trim();
+
+    if (!trimmed || trimmed.length < SEARCH_CONFIG.MIN_QUERY_LENGTH) {
       setResults([]);
+      setIsSearching(false);
+      setSearchError(null);
+      return;
     }
+
+    let isCurrent = true;
+    setIsSearching(true);
+    setSearchError(null);
+
+    const timeoutId = window.setTimeout(async () => {
+      const response = await apiClient.events.search(trimmed);
+
+      if (!isCurrent) {
+        return;
+      }
+
+      if (response.data) {
+        setResults(response.data);
+        setSearchError(null);
+      } else {
+        const fallback = mockEvents
+          .filter((event) =>
+            event.title.toLowerCase().includes(trimmed.toLowerCase()) ||
+            event.artist.toLowerCase().includes(trimmed.toLowerCase()) ||
+            event.venue.city.toLowerCase().includes(trimmed.toLowerCase()) ||
+            event.category.toLowerCase().includes(trimmed.toLowerCase())
+          )
+          .slice(0, 5);
+        setResults(fallback);
+        setSearchError(response.error ?? null);
+      }
+
+      setIsSearching(false);
+    }, SEARCH_CONFIG.DEBOUNCE_DELAY_MS);
+
+    return () => {
+      isCurrent = false;
+      window.clearTimeout(timeoutId);
+    };
   }, [query]);
 
   const handleSearch = (searchQuery: string) => {
@@ -117,7 +154,11 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
             <div className="max-h-[60vh] overflow-y-auto">
               {query.trim() ? (
                 <div className="p-4">
-                  {results.length > 0 ? (
+                  {isSearching ? (
+                    <div className="py-8 flex items-center justify-center">
+                      <LoadingSpinner size="sm" message="Searching events" />
+                    </div>
+                  ) : results.length > 0 ? (
                     <div className="space-y-2">
                       <p className="text-xs text-[var(--text-tertiary)] uppercase tracking-wide px-2 mb-3">
                         Search Results
@@ -161,7 +202,9 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
                   ) : (
                     <div className="text-center py-12">
                       <Search className="w-12 h-12 text-[var(--text-tertiary)] mx-auto mb-3" />
-                      <p className="text-[var(--text-secondary)]">No results found for "{query}"</p>
+                      <p className="text-[var(--text-secondary)]">
+                        {searchError ? searchError : `No results found for "${query}"`}
+                      </p>
                       <p className="text-sm text-[var(--text-tertiary)] mt-1">
                         Try different keywords
                       </p>

@@ -12,10 +12,12 @@ const prisma = new PrismaClient();
 const events = [
   {
     title: 'Neon Waves Festival 2025',
+    artist: 'Various Artists',
     description:
       "Experience three days of electronic music across 5 stages featuring the world's top DJs and emerging artists. Join us for an unforgettable journey through sound and light.",
     category: 'festival' as const,
     date: new Date('2025-07-15'),
+    time: '14:00',
     venueName: 'Jakarta International Expo',
     venueAddress: 'Jl. Gatot Subroto, Jakarta Pusat, DKI Jakarta 10270',
     venueCity: 'Jakarta',
@@ -50,10 +52,12 @@ const events = [
   },
   {
     title: 'The Midnight Orchestra',
+    artist: 'Jakarta Symphony Orchestra',
     description:
       'A mesmerizing evening of classical masterpieces performed by the renowned Jakarta Symphony Orchestra. Featuring works by Mozart, Beethoven, and contemporary composers.',
     category: 'theater' as const,
     date: new Date('2025-06-20'),
+    time: '19:30',
     venueName: 'Teater Jakarta',
     venueAddress: 'Jl. Cikini Raya No.73, Jakarta Pusat 10330',
     venueCity: 'Jakarta',
@@ -88,10 +92,12 @@ const events = [
   },
   {
     title: 'Stand-Up Comedy Night: Pandji Pragiwaksono',
+    artist: 'Pandji Pragiwaksono',
     description:
       'Join comedy superstar Pandji Pragiwaksono for an evening of non-stop laughter. His unique blend of observational humor and storytelling will have you in stitches.',
     category: 'comedy' as const,
     date: new Date('2025-05-10'),
+    time: '20:00',
     venueName: 'Balai Sarbini',
     venueAddress: 'Jl. Sisingamangaraja, Jakarta Selatan 12110',
     venueCity: 'Jakarta',
@@ -119,10 +125,12 @@ const events = [
   },
   {
     title: 'Rock Legends: The Phoenix',
+    artist: 'The Phoenix',
     description:
       'The Phoenix returns with their greatest hits tour! Experience the raw energy and unforgettable anthems that defined a generation. Special guest appearances confirmed.',
     category: 'concert' as const,
     date: new Date('2025-08-22'),
+    time: '19:00',
     venueName: 'Gelora Bung Karno Stadium',
     venueAddress: 'Jl. Pintu Satu Senayan, Jakarta Pusat 10270',
     venueCity: 'Jakarta',
@@ -164,10 +172,12 @@ const events = [
   },
   {
     title: 'Jazz Under the Stars',
+    artist: 'Indra Lesmana Trio',
     description:
       'An intimate evening of smooth jazz in an open-air setting. Indra Lesmana Trio brings their acclaimed blend of traditional and contemporary jazz to the scenic Taman Ismail Marzuki.',
     category: 'concert' as const,
     date: new Date('2025-06-05'),
+    time: '20:30',
     venueName: 'Taman Ismail Marzuki',
     venueAddress: 'Jl. Cikini Raya No.73, Jakarta Pusat 10330',
     venueCity: 'Jakarta',
@@ -202,10 +212,12 @@ const events = [
   },
   {
     title: 'Broadway Hits: Greatest Showman',
+    artist: 'Teater Koma Ensemble',
     description:
       'A spectacular theatrical production celebrating the greatest hits from Broadway. Featuring talented performers and breathtaking choreography in an unforgettable show.',
     category: 'theater' as const,
     date: new Date('2025-09-12'),
+    time: '19:00',
     venueName: 'Ciputra Artpreneur',
     venueAddress: 'Ciputra World 1, Jl. Prof. Dr. Satrio Kav. 3-5, Jakarta 12940',
     venueCity: 'Jakarta',

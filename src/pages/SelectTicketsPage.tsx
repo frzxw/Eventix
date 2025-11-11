@@ -3,7 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { BookingStep1, type TicketSelection } from '../components/booking/BookingStep1';
 import { BookingStep2, type AttendeeInfo } from '../components/booking/BookingStep2';
 import { BookingStep3 } from '../components/booking/BookingStep3';
-import { mockEvents } from '../lib/mock-data';
+import { LoadingSpinner } from '../components/LoadingSpinner';
+import { useEvent } from '../lib/hooks/useEvent';
 
 type BookingStep = 1 | 2 | 3;
 
@@ -13,8 +14,15 @@ export function SelectTicketsPage() {
   const [currentStep, setCurrentStep] = useState<BookingStep>(1);
   const [selections, setSelections] = useState<TicketSelection[]>([]);
   const [attendeeInfo, setAttendeeInfo] = useState<AttendeeInfo | null>(null);
-  
-  const event = mockEvents.find((e) => e.id === eventId);
+  const { event, isLoading, error } = useEvent(eventId);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <LoadingSpinner size="lg" message="Preparing ticket selection" />
+      </div>
+    );
+  }
 
   if (!event) {
     return (
@@ -23,7 +31,7 @@ export function SelectTicketsPage() {
           Event Not Found
         </h1>
         <p className="text-[var(--text-secondary)] mb-6">
-          The event you're looking for doesn't exist.
+          {error ?? "The event you're looking for doesn't exist."}
         </p>
         <button
           onClick={() => navigate('/')}

@@ -13,14 +13,59 @@ const envSchema = z.object({
   HOLD_TTL_SECONDS: z.string().min(1, "HOLD_TTL_SECONDS is required"),
   HOLD_EXPIRATION_SCAN_LIMIT: z.string().min(1, "HOLD_EXPIRATION_SCAN_LIMIT is required"),
   IDEMPOTENCY_TTL_SECONDS: z.string().min(1, "IDEMPOTENCY_TTL_SECONDS is required"),
-  SERVICE_BUS_CONNECTION_STRING: z.string().min(1, "SERVICE_BUS_CONNECTION_STRING is required"),
-  SERVICE_BUS_FINALIZATION_QUEUE: z.string().min(1, "SERVICE_BUS_FINALIZATION_QUEUE is required"),
+  SERVICE_BUS_CONNECTION_STRING: z.string().optional(),
+  SERVICE_BUS_FINALIZATION_QUEUE: z.string().optional(),
+  QUEUE_MODE: z.enum(["servicebus", "redis"]).optional(),
+  REDIS_FINALIZATION_QUEUE_KEY: z.string().optional(),
+  REDIS_FINALIZATION_DLQ_KEY: z.string().optional(),
   APPLICATION_INSIGHTS_CONNECTION_STRING: z.string().optional(),
   RATE_LIMIT_MAX: z.string().optional(),
   RATE_LIMIT_WINDOW: z.string().optional(),
 });
 
 const rawEnv = envSchema.parse(process.env);
+
+type ServiceBusQueueConfigInternal = {
+  mode: "servicebus";
+  connectionString: string;
+  finalizationQueueName: string;
+};
+
+type RedisQueueConfigInternal = {
+  mode: "redis";
+  redisQueueKey: string;
+  redisDeadLetterKey: string;
+};
+
+type QueueConfigInternal = ServiceBusQueueConfigInternal | RedisQueueConfigInternal;
+
+const detectedQueueMode = rawEnv.QUEUE_MODE ?? (rawEnv.SERVICE_BUS_CONNECTION_STRING ? "servicebus" : "redis");
+
+let queueConfig: QueueConfigInternal;
+
+if (detectedQueueMode === "servicebus") {
+  if (!rawEnv.SERVICE_BUS_CONNECTION_STRING || rawEnv.SERVICE_BUS_CONNECTION_STRING.trim().length === 0) {
+    throw new Error("SERVICE_BUS_CONNECTION_STRING is required when QUEUE_MODE is 'servicebus'");
+  }
+  const queueName = rawEnv.SERVICE_BUS_FINALIZATION_QUEUE && rawEnv.SERVICE_BUS_FINALIZATION_QUEUE.trim().length > 0
+    ? rawEnv.SERVICE_BUS_FINALIZATION_QUEUE
+    : "order-queue";
+  queueConfig = {
+    mode: "servicebus",
+    connectionString: rawEnv.SERVICE_BUS_CONNECTION_STRING,
+    finalizationQueueName: queueName,
+  } as const;
+} else {
+  queueConfig = {
+    mode: "redis",
+    redisQueueKey: rawEnv.REDIS_FINALIZATION_QUEUE_KEY && rawEnv.REDIS_FINALIZATION_QUEUE_KEY.trim().length > 0
+      ? rawEnv.REDIS_FINALIZATION_QUEUE_KEY
+      : "queues:finalization",
+    redisDeadLetterKey: rawEnv.REDIS_FINALIZATION_DLQ_KEY && rawEnv.REDIS_FINALIZATION_DLQ_KEY.trim().length > 0
+      ? rawEnv.REDIS_FINALIZATION_DLQ_KEY
+      : "queues:finalization:dead-letter",
+  } as const;
+}
 
 export const config = {
   nodeEnv: rawEnv.NODE_ENV,
@@ -43,10 +88,7 @@ export const config = {
   idempotency: {
     ttlSeconds: Number(rawEnv.IDEMPOTENCY_TTL_SECONDS),
   },
-  serviceBus: {
-    connectionString: rawEnv.SERVICE_BUS_CONNECTION_STRING,
-    finalizationQueueName: rawEnv.SERVICE_BUS_FINALIZATION_QUEUE,
-  },
+  queue: queueConfig,
   applicationInsightsConnectionString: rawEnv.APPLICATION_INSIGHTS_CONNECTION_STRING,
   rateLimit: rawEnv.RATE_LIMIT_MAX && rawEnv.RATE_LIMIT_WINDOW
     ? {
@@ -60,6 +102,8 @@ type Config = typeof config;
 export type RedisConfig = Config["redis"];
 export type HoldConfig = Config["hold"];
 export type IdempotencyConfig = Config["idempotency"];
-export type ServiceBusConfig = Config["serviceBus"];
+export type QueueConfig = Config["queue"];
 export type PostgresConfig = Config["postgres"];
 export type RateLimitConfig = Config["rateLimit"];
+export type ServiceBusQueueConfig = Extract<QueueConfig, { mode: "servicebus" }>;
+export type RedisQueueConfig = Extract<QueueConfig, { mode: "redis" }>;

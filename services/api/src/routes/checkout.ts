@@ -3,7 +3,7 @@ import { randomUUID } from "crypto";
 import { z } from "zod";
 import { claimHold, markHoldCommitted, releaseHold } from "../inventory/holdService";
 import { withTransaction } from "../lib/db";
-import { sendFinalizationMessage } from "../lib/serviceBus";
+import { sendFinalizationMessage, type FinalizationMessage } from "../lib/serviceBus";
 import { config } from "../config/environment";
 
 const checkoutSchema = z.object({
@@ -264,18 +264,17 @@ export async function checkoutRoutes(app: FastifyInstance) {
           await markHoldCommitted(body.holdToken, transactionResult.payload.orderId);
           holdCommitted = true;
 
-          await sendFinalizationMessage({
-            body: {
-              orderId: transactionResult.payload.orderId,
-              holdToken: body.holdToken,
-              eventId: body.eventId,
-              items: body.items,
-              paymentMethod: body.payment.method,
-              paymentReference: body.payment.reference,
-            },
-            contentType: "application/json",
+          const finalizationPayload: FinalizationMessage = {
+            orderId: transactionResult.payload.orderId,
+            holdToken: body.holdToken,
+            eventId: body.eventId,
+            items: body.items,
+            paymentMethod: body.payment.method,
+            paymentReference: body.payment.reference,
+          };
+
+          await sendFinalizationMessage(finalizationPayload, {
             correlationId: body.holdToken,
-            messageId: randomUUID(),
           });
 
           await withTransaction(async (client) => {

@@ -105,6 +105,10 @@ All visual design is controlled by tokens in `/lib/tokens.ts` and CSS variables 
 - Node.js 18+ and npm/yarn
 - Modern browser with ES6+ support
 
+### Run with Docker (Full Stack)
+
+If you prefer running the entire stack in containers (frontend, API, workers, Postgres, Redis), follow [docs/development/DOCKER_DEV_SETUP.md](docs/development/DOCKER_DEV_SETUP.md). The guide walks through setting the required Service Bus variables, applying Prisma migrations, and starting the hot-reload dev environment via Docker Compose.
+
 ### Installation
 
 ```bash

@@ -24,12 +24,12 @@ function buildHoldKey(holdToken: string): string {
   return `${HOLD_KEY_PREFIX}${holdToken}`;
 }
 
-type FinalizationItem = {
+export type FinalizationItem = {
   categoryId: string;
   quantity: number;
 };
 
-type FinalizationMessage = {
+export type FinalizationMessage = {
   orderId: string;
   holdToken: string;
   eventId: string;

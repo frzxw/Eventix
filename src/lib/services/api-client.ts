@@ -19,6 +19,7 @@
  * });
  */
 
+import { API } from "@/lib/constants";
 import type { Event } from "@/lib/types";
 
 type ApiResponse<T> = {
@@ -31,7 +32,7 @@ type ApiResponse<T> = {
   totalPages?: number;
 };
 
-const API_BASE_URL = (import.meta.env.VITE_API_URL || "http://localhost:8080").replace(/\/$/, "");
+const API_BASE_URL = API.BASE_URL.replace(/\/$/, "");
 
 /**
  * Make API request
@@ -133,7 +134,7 @@ export const events = {
     if (params?.sort) query.append("sort", params.sort);
 
     const queryString = query.toString();
-    const path = queryString.length > 0 ? `/v1/events?${queryString}` : "/v1/events";
+    const path = queryString.length > 0 ? `/events?${queryString}` : "/events";
 
     return request<{ events: Event[]; total: number; page: number; totalPages: number }>(path);
   },
@@ -142,14 +143,14 @@ export const events = {
    * GET /api/events/:id
    */
   async getById(id: string): Promise<{ data?: { event: Event; relatedEvents: Event[] }; error?: string }> {
-    return request<{ event: Event; relatedEvents: Event[] }>(`/v1/events/${id}`);
+    return request<{ event: Event; relatedEvents: Event[] }>(`/events/${id}`);
   },
 
   /**
    * GET /api/events/featured
    */
   async getFeatured(): Promise<{ data?: Event[]; error?: string }> {
-    const response = await request<{ events: Event[] }>("/v1/events/featured");
+    const response = await request<{ events: Event[] }>("/events/featured");
     if (response.error) {
       return { error: response.error };
     }
@@ -163,7 +164,7 @@ export const events = {
     if (!query || query.length < 2) {
       return { data: [] };
     }
-    const response = await request<{ events: Event[] }>(`/v1/events/search?query=${encodeURIComponent(query)}`);
+    const response = await request<{ events: Event[] }>(`/search?q=${encodeURIComponent(query)}`);
     if (response.error) {
       return { error: response.error };
     }
@@ -190,7 +191,7 @@ export const bookings = {
     };
     promoCode?: string;
   }): Promise<{ data?: any; error?: string }> {
-    return request("/bookings", {
+    return request("/orders/create", {
       method: "POST",
       body: data,
     });
@@ -200,7 +201,7 @@ export const bookings = {
    * GET /api/bookings/:id
    */
   async getById(id: string): Promise<{ data?: any; error?: string }> {
-    return request(`/bookings/${id}`);
+    return request(`/orders/${id}`);
   },
 
   /**
@@ -211,14 +212,16 @@ export const bookings = {
     status?: string;
     page?: number;
     limit?: number;
-  }): Promise<{ data?: any[]; error?: string }> {
+  }): Promise<{ data?: { orders: any[]; total: number; page: number; totalPages: number }; error?: string }> {
     const query = new URLSearchParams();
     if (params?.userId) query.append("userId", params.userId);
     if (params?.status) query.append("status", params.status);
     if (params?.page) query.append("page", params.page.toString());
     if (params?.limit) query.append("limit", params.limit.toString());
 
-    return request(`/orders?${query}`);
+    const queryString = query.toString();
+    const path = queryString.length > 0 ? `/orders/my-orders?${queryString}` : "/orders/my-orders";
+    return request<{ orders: any[]; total: number; page: number; totalPages: number }>(path);
   },
 };
 

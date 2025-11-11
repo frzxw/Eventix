@@ -8,6 +8,6 @@
     "JWT_EXPIRY": "15m",
     "JWT_REFRESH_EXPIRY": "7d",
     "BCRYPT_ROUNDS": "12",
-    "DATABASE_URL": "Server=your-sql-server.database.windows.net,1433;Database=eventix-db;User Id=sqladmin;Password=<Password>;Encrypt=true;TrustServerCertificate=false;Connection Timeout=30;"
+    "DATABASE_URL": "postgresql://eventix:eventix@localhost:5432/eventix?schema=public"
   }
 }

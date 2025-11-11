@@ -127,7 +127,7 @@ services:
       - "5173:5173"
     environment:
       NODE_ENV: development
-      VITE_API_URL: "http://localhost:8080"
+      VITE_API_URL: "http://host.docker.internal:7071/api"
       DATABASE_URL: "postgresql://eventix:eventix@postgres:5432/eventix?sslmode=disable"
       CHOKIDAR_USEPOLLING: "1"
     volumes:

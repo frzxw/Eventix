@@ -46,6 +46,7 @@ import {
   createOrderHandler,
   confirmOrderHandler,
   myOrdersHandler,
+  getOrderHandler,
 } from "./handlers/orders";
 import {
   myTicketsHandler,
@@ -73,6 +74,7 @@ const routeHandlers: RouteHandlersMap = {
   "POST /api/orders/create": adaptHandler(createOrderHandler),
   "POST /api/orders/:id/confirm": adaptHandler(confirmOrderHandler),
   "GET /api/orders/my-orders": adaptHandler(myOrdersHandler),
+  "GET /api/orders/:id": adaptHandler(getOrderHandler),
 
   // Tickets
   "GET /api/tickets/my-tickets": adaptHandler(myTicketsHandler),
@@ -83,7 +85,7 @@ const routeHandlers: RouteHandlersMap = {
 /**
  * Main HTTP Trigger Function
  */
-export default async function (req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
+export async function run(context: InvocationContext, req: HttpRequest): Promise<HttpResponseInit> {
   context.log(`HTTP ${req.method} request for URL: ${req.url}`);
 
   try {
@@ -101,7 +103,7 @@ export default async function (req: HttpRequest, context: InvocationContext): Pr
     // Execute handler
     return await handler(req, context);
   } catch (error: any) {
-  context.log("API Error:", error);
+    context.log("API Error:", error);
     return json(500, { success: false, error: "Internal server error", message: error.message });
   }
 }

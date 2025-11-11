@@ -81,17 +81,28 @@ class AzureApiClient {
           const refreshToken = this.getRefreshToken();
           if (refreshToken) {
             try {
-              const response = await this.client.post('/auth/refresh', {
+              const response = await this.client.post('/auth/refresh-token', {
                 refreshToken,
               });
-              
-              const { token, refreshToken: newRefreshToken } = response.data;
-              this.setAuthToken(token);
+
+              const payload = (response.data?.data ?? response.data) as {
+                accessToken?: string;
+                refreshToken?: string;
+                token?: string;
+              };
+              const newAccessToken = payload.accessToken ?? payload.token;
+              const newRefreshToken = payload.refreshToken;
+
+              if (!newAccessToken || !newRefreshToken) {
+                throw new Error('Invalid refresh token response');
+              }
+
+              this.setAuthToken(newAccessToken);
               this.setRefreshToken(newRefreshToken);
               
               // Retry original request
               if (config.headers) {
-                config.headers.Authorization = `Bearer ${token}`;
+                config.headers.Authorization = `Bearer ${newAccessToken}`;
               }
               return this.client(config);
             } catch (refreshError) {
@@ -258,7 +269,7 @@ class AzureApiClient {
   }
 
   async searchEvents(query: string) {
-    const response = await this.client.get('/events/search', {
+    const response = await this.client.get('/search', {
       params: { q: query },
     });
     logger.debug('Events searched', { query, count: response.data.events?.length });

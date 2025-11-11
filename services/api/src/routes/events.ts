@@ -9,6 +9,8 @@ const listQuerySchema = z.object({
   category: z.string().trim().min(1).optional(),
   city: z.string().trim().min(1).optional(),
   search: z.string().trim().min(1).optional(),
+  minPrice: z.coerce.number().min(0).optional(),
+  maxPrice: z.coerce.number().min(0).optional(),
   page: z.coerce.number().int().min(1).optional(),
   limit: z.coerce.number().int().min(1).max(50).optional(),
   sort: z.enum(["date", "newest"]).optional(),
@@ -69,6 +71,8 @@ type QueryFilters = {
   search?: string;
   isFeatured?: boolean;
   excludeId?: string;
+  minPrice?: number;
+  maxPrice?: number;
 };
 
 type QueryOptions = {
@@ -215,6 +219,40 @@ function buildWhere(filters: QueryFilters) {
     conditions.push(`(e.title ILIKE $${idx} OR e.description ILIKE $${idx} OR e.artist ILIKE $${idx} OR e.venue_city ILIKE $${idx})`);
   }
 
+  if (typeof filters.minPrice === "number" && typeof filters.maxPrice === "number") {
+    params.push(filters.minPrice);
+    const minIdx = params.length;
+    params.push(filters.maxPrice);
+    const maxIdx = params.length;
+    conditions.push(
+      `EXISTS (
+        SELECT 1 FROM ticket_categories tc_price
+        WHERE tc_price.event_id = e.id
+        AND tc_price.price BETWEEN $${minIdx} AND $${maxIdx}
+      )`
+    );
+  } else if (typeof filters.minPrice === "number") {
+    params.push(filters.minPrice);
+    const minIdx = params.length;
+    conditions.push(
+      `EXISTS (
+        SELECT 1 FROM ticket_categories tc_min
+        WHERE tc_min.event_id = e.id
+        AND tc_min.price >= $${minIdx}
+      )`
+    );
+  } else if (typeof filters.maxPrice === "number") {
+    params.push(filters.maxPrice);
+    const maxIdx = params.length;
+    conditions.push(
+      `EXISTS (
+        SELECT 1 FROM ticket_categories tc_max
+        WHERE tc_max.event_id = e.id
+        AND tc_max.price <= $${maxIdx}
+      )`
+    );
+  }
+
   const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
   return { whereClause, params };
 }
@@ -294,6 +332,8 @@ export async function eventsRoutes(app: FastifyInstance) {
             category: parsed.category,
             city: parsed.city,
             search: parsed.search,
+            minPrice: parsed.minPrice,
+            maxPrice: parsed.maxPrice,
           },
           page,
           limit,

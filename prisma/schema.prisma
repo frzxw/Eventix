@@ -148,6 +148,7 @@ model TicketCategory {
   // Relations
   event             Event       @relation(fields: [eventId], references: [id], onDelete: Cascade)
   tickets           Ticket[]
+  orderItems        OrderItem[]
 
   @@index([eventId])
   @@map("ticket_categories")

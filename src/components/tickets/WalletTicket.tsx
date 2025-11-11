@@ -1,4 +1,4 @@
-import { Calendar, MapPin, Clock, Download, Share2, Smartphone, ChevronRight } from 'lucide-react';
+import { Calendar, MapPin, Clock, Share2, Smartphone, ChevronRight } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import type { Ticket } from '../../lib/types';
@@ -12,7 +12,12 @@ interface WalletTicketProps {
 }
 
 export function WalletTicket({ ticket, onAddToWallet, onAddToCalendar, onShare }: WalletTicketProps) {
-  const qrCode = generateQRCode(ticket.id);
+  const qrCodeSource = ticket.qrCodeUrl || ticket.qrCode;
+  const qrCode = qrCodeSource
+    ? qrCodeSource
+    : ticket.qrCodeData
+    ? generateQRCode(ticket.qrCodeData)
+    : generateQRCode(ticket.ticketNumber || ticket.id);
   
   // Parse date for better formatting
   const eventDate = new Date(ticket.eventDate);
@@ -21,6 +26,7 @@ export function WalletTicket({ ticket, onAddToWallet, onAddToCalendar, onShare }
   const month = eventDate.toLocaleDateString('en-US', { month: 'short' });
   const year = eventDate.getFullYear();
   const fullMonth = eventDate.toLocaleDateString('en-US', { month: 'long' });
+  const eventTime = ticket.eventTime || eventDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
 
   return (
     <article 
@@ -45,6 +51,8 @@ export function WalletTicket({ ticket, onAddToWallet, onAddToCalendar, onShare }
                     ? 'bg-white/20 border-white/40 text-white backdrop-blur-sm'
                     : ticket.status === 'used'
                     ? 'bg-gray-500/20 border-gray-500/50 text-gray-300'
+                    : ticket.status === 'transferred'
+                    ? 'bg-amber-500/20 border-amber-500/50 text-amber-100'
                     : 'bg-red-500/20 border-red-500/50 text-red-300'
                 }
               `}
@@ -97,7 +105,7 @@ export function WalletTicket({ ticket, onAddToWallet, onAddToCalendar, onShare }
               <div className="flex-1 min-w-0">
                 <p className="text-[10px] uppercase text-white/70 tracking-wide mb-0.5">Time</p>
                 <p className="text-lg text-white" style={{ fontWeight: 'var(--font-weight-medium)' }}>
-                  {ticket.eventTime}
+                  {eventTime}
                 </p>
                 <p className="text-xs text-white/80">WIB</p>
               </div>
@@ -113,7 +121,7 @@ export function WalletTicket({ ticket, onAddToWallet, onAddToCalendar, onShare }
           <div className="p-6 bg-white rounded-3xl mb-4 shadow-lg">
             <img
               src={qrCode}
-              alt={`QR code for ticket ${ticket.id}`}
+              alt={`QR code for ticket ${ticket.ticketNumber || ticket.id}`}
               className="w-48 h-48 sm:w-56 sm:h-56"
             />
           </div>
@@ -131,8 +139,8 @@ export function WalletTicket({ ticket, onAddToWallet, onAddToCalendar, onShare }
 
         {/* Ticket Details Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8 pb-8 border-b border-[var(--border-default)]">
-          <DetailCard label="Ticket ID" value={ticket.id} />
-          <DetailCard label="Order ID" value={ticket.orderId} />
+          <DetailCard label="Ticket Number" value={ticket.ticketNumber || ticket.id} />
+          <DetailCard label="Order" value={ticket.orderNumber || ticket.orderId} />
           <DetailCard label="Category" value={ticket.category} highlight />
           {ticket.seat && <DetailCard label="Seat" value={ticket.seat} highlight />}
           <DetailCard label="Attendee Name" value={ticket.customerName} className="sm:col-span-2" />

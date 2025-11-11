@@ -28,12 +28,100 @@ export async function myTicketsHandler(req: HttpRequest): Promise<HttpResponseIn
         status: true,
         eventId: true,
         orderId: true,
+        categoryId: true,
         qrCodeUrl: true,
         qrCodeData: true,
+        barcodeData: true,
+        createdAt: true,
       },
     });
 
-    return ok({ success: true, tickets });
+    if (tickets.length === 0) {
+      return ok({ success: true, tickets: [] });
+    }
+
+    const eventIds = Array.from(new Set(tickets.map((ticket) => ticket.eventId).filter(Boolean)));
+    const categoryIds = Array.from(new Set(tickets.map((ticket) => ticket.categoryId).filter(Boolean)));
+    const orderIds = Array.from(new Set(tickets.map((ticket) => ticket.orderId).filter(Boolean)));
+
+    const [events, categories, orders] = await Promise.all([
+      eventIds.length > 0
+        ? prisma.event.findMany({
+            where: { id: { in: eventIds } },
+            select: {
+              id: true,
+              title: true,
+              date: true,
+              venueName: true,
+              venueCity: true,
+            },
+          })
+        : Promise.resolve([]),
+      categoryIds.length > 0
+        ? prisma.ticketCategory.findMany({
+            where: { id: { in: categoryIds } },
+            select: {
+              id: true,
+              name: true,
+              displayName: true,
+            },
+          })
+        : Promise.resolve([]),
+      orderIds.length > 0
+        ? prisma.order.findMany({
+            where: { id: { in: orderIds } },
+            select: {
+              id: true,
+              orderNumber: true,
+              attendeeFirstName: true,
+              attendeeLastName: true,
+              attendeeEmail: true,
+            },
+          })
+        : Promise.resolve([]),
+    ]);
+
+    const eventMap = new Map(events.map((event) => [event.id, event]));
+    const categoryMap = new Map(categories.map((category) => [category.id, category]));
+    const orderMap = new Map(orders.map((order) => [order.id, order]));
+
+    const enrichedTickets = tickets.map((ticket) => {
+      const event = eventMap.get(ticket.eventId);
+      const category = ticket.categoryId ? categoryMap.get(ticket.categoryId) : undefined;
+      const order = orderMap.get(ticket.orderId);
+
+      return {
+        ...ticket,
+        createdAt: ticket.createdAt instanceof Date ? ticket.createdAt.toISOString() : ticket.createdAt,
+        event: event
+          ? {
+              id: event.id,
+              title: event.title,
+              date: event.date instanceof Date ? event.date.toISOString() : event.date,
+              venueName: event.venueName,
+              venueCity: event.venueCity,
+            }
+          : null,
+        category: category
+          ? {
+              id: category.id,
+              name: category.name,
+              displayName: category.displayName ?? category.name,
+            }
+          : null,
+        order: order
+          ? {
+              id: order.id,
+              orderNumber: order.orderNumber,
+              attendeeFirstName: order.attendeeFirstName,
+              attendeeLastName: order.attendeeLastName,
+              attendeeEmail: order.attendeeEmail,
+            }
+          : null,
+      };
+    });
+
+    return ok({ success: true, tickets: enrichedTickets });
   } catch (e: any) {
     return fail(`Failed to fetch tickets: ${e?.message || 'Unknown error'}`);
   }

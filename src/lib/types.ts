@@ -91,18 +91,23 @@ export interface PaymentDetails {
 
 export interface Ticket {
   id: string;
+  ticketNumber: string;
   orderId: string;
+  orderNumber?: string;
   eventId: string;
   eventTitle: string;
   eventDate: string;
-  eventTime: string;
+  eventTime?: string;
   venue: string;
   category: string;
   seat?: string;
-  qrCode: string;
+  qrCode?: string;
+  qrCodeUrl?: string;
+  qrCodeData?: string;
   barcode: string;
   customerName: string;
-  status: 'valid' | 'used' | 'cancelled';
+  status: 'valid' | 'used' | 'cancelled' | 'transferred';
+  createdAt?: string;
 }
 
 export interface FilterOptions {

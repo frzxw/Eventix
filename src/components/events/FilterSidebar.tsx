@@ -3,13 +3,14 @@ import { Button } from '../ui/button';
 import { Checkbox } from '../ui/checkbox';
 import { Label } from '../ui/label';
 import { Slider } from '../ui/slider';
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { EventCategory, TicketStatus } from '../../lib/types';
 
 interface FilterSidebarProps {
   onFilterChange?: (filters: FilterState) => void;
   onClose?: () => void;
   isMobile?: boolean;
+  value?: FilterState;
 }
 
 export interface FilterState {
@@ -24,27 +25,37 @@ const categories: EventCategory[] = ['concert', 'festival', 'theater', 'comedy',
 const cities = ['Jakarta', 'Bandung', 'Surabaya', 'Yogyakarta', 'Bali', 'Semarang'];
 const availabilityOptions: TicketStatus[] = ['available', 'low-stock'];
 
-export function FilterSidebar({ onFilterChange, onClose, isMobile }: FilterSidebarProps) {
-  const [filters, setFilters] = useState<FilterState>({
+const MAX_PRICE = 10000000;
+
+function createDefaultFilters(): FilterState {
+  return {
     categories: [],
     cities: [],
-    priceRange: [0, 10000000],
+    priceRange: [0, MAX_PRICE],
     availability: ['available', 'low-stock'],
-  });
+  };
+}
+
+export function FilterSidebar(props: FilterSidebarProps) {
+  const { onFilterChange, onClose, isMobile, value } = props;
+  const controlledFilters = useMemo(() => value ?? createDefaultFilters(), [value]);
+  const [filters, setFilters] = useState<FilterState>(controlledFilters);
+
+  useEffect(() => {
+    setFilters(controlledFilters);
+  }, [controlledFilters]);
 
   const handleCategoryToggle = (category: EventCategory) => {
-    const newCategories = filters.categories.includes(category)
-      ? filters.categories.filter((c) => c !== category)
-      : [...filters.categories, category];
+    const isSelected = filters.categories.includes(category);
+    const newCategories = isSelected ? [] : [category];
     const newFilters = { ...filters, categories: newCategories };
     setFilters(newFilters);
     onFilterChange?.(newFilters);
   };
 
   const handleCityToggle = (city: string) => {
-    const newCities = filters.cities.includes(city)
-      ? filters.cities.filter((c) => c !== city)
-      : [...filters.cities, city];
+    const isSelected = filters.cities.includes(city);
+    const newCities = isSelected ? [] : [city];
     const newFilters = { ...filters, cities: newCities };
     setFilters(newFilters);
     onFilterChange?.(newFilters);
@@ -66,12 +77,7 @@ export function FilterSidebar({ onFilterChange, onClose, isMobile }: FilterSideb
   };
 
   const handleReset = () => {
-    const resetFilters: FilterState = {
-      categories: [],
-      cities: [],
-      priceRange: [0, 1000],
-      availability: ['available', 'low-stock'],
-    };
+    const resetFilters = createDefaultFilters();
     setFilters(resetFilters);
     onFilterChange?.(resetFilters);
   };
@@ -164,7 +170,7 @@ export function FilterSidebar({ onFilterChange, onClose, isMobile }: FilterSideb
               value={filters.priceRange}
               onValueChange={handlePriceChange}
               min={0}
-              max={10000000}
+              max={MAX_PRICE}
               step={100000}
               className="focus-ring"
               aria-label="Price range slider"

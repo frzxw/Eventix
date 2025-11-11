@@ -11,49 +11,11 @@ REM   set DATABASE_URL=...   (required when RUN_MIGRATIONS=true)
 REM   set DEPLOY_FUNCTIONS=true
 REM   set ALLOW_MY_IP=true
 
-set SWA_URL=%1
-
 call "%~dp0\00-az-variables.cmd" || goto :fail
 
 echo.
-echo [1/4] Provisioning core Azure resources...
+echo [1/1] Provisioning Azure resources via Bicep...
 call "%~dp0\10-az-provision-core.cmd" || goto :fail
-
-if /I "%ALLOW_MY_IP%"=="true" (
-  echo.
-  echo [1b/4] Allowing current public IP for Azure SQL firewall...
-  call "%~dp0\15-az-sql-allow-ip.cmd" || rem continue on best-effort
-)
-
-echo.
-echo [2/4] Creating Key Vault secrets and granting access...
-call "%~dp0\20-az-keyvault-secrets.cmd" || goto :fail
-
-echo.
-echo [3/4] Configuring Function App settings and storage...
-call "%~dp0\30-az-func-settings.cmd" || goto :fail
-
-if not "%SWA_URL%"=="" (
-  echo.
-  echo [3b/4] Adding CORS origin: %SWA_URL%
-  call "%~dp0\40-az-cors.cmd" %SWA_URL% || goto :fail
-)
-
-if /I "%RUN_MIGRATIONS%"=="true" (
-  echo.
-  if "%DATABASE_URL%"=="" (
-    echo [WARN] RUN_MIGRATIONS=true but DATABASE_URL not set. Skipping migrations.
-  ) else (
-    echo [4/4] Running Prisma migrate deploy against target database...
-    call "%~dp0\50-prisma-migrate.cmd" || goto :fail
-  )
-)
-
-if /I "%DEPLOY_FUNCTIONS%"=="true" (
-  echo.
-  echo [Final] Deploying Azure Functions code ...
-  call "%~dp0\60-func-deploy.cmd" || goto :fail
-)
 
 echo.
 echo ✅ All steps completed successfully.

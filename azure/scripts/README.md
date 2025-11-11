@@ -1,96 +1,66 @@
 # Azure scripts (Windows cmd)
 
-This folder provides Windows cmd helpers to stand up Eventix on Azure quickly.
+Windows-friendly wrappers for deploying the Eventix production stack to Azure Container Apps, Azure Database for PostgreSQL, Azure Cache for Redis, and Service Bus.
 
-## Quick start: one command (.bat)
+## Before you start
 
-Run everything with a single orchestrator:
+1. Copy `00-az-variables.local.cmd.example` to `00-az-variables.local.cmd` and fill in:
+  - `AZ_SUBSCRIPTION_ID`, `AZ_LOCATION`, and (if you change it) `AZ_ENVIRONMENT`
+  - Any resource names that differ from the defaults emitted by the Bicep deployment (Key Vault, Container Apps, etc.)
+  - An **18+ character PostgreSQL admin password** (`AZ_PG_ADMIN_PASSWORD`)
+  - Container image tags (`AZ_API_IMAGE`, etc.). Defaults point at GitHub Container Registry; override if you push to ACR or another registry.
+2. Sign in to Azure CLI (`az login`).
+3. Ensure `az` has the latest `containerapp` extension (`az extension add --name containerapp` if needed).
 
-- Create optional local overrides by copying `00-az-variables.local.cmd.example` to `00-az-variables.local.cmd` and editing values.
-- Then execute one of:
+## Primary workflow
 
-```
-azure\scripts\run-all.bat
-```
+1. **Provision everything with Bicep**
 
-Or include your Static Web App URL to also configure CORS:
+  ```cmd
+  azure\scripts\10-az-provision-core.cmd
+  ```
 
-```
-azure\scripts\run-all.bat https://<your-swa>.azurestaticapps.net
-```
+  This script:
+  - Logs in (device-code fallback supported)
+  - Creates the resource group
+  - Deploys `azure/infrastructure/main.bicep` with the parameters from `00-az-variables` (PostgreSQL, Redis, Service Bus, Container Apps, Key Vault, etc.)
 
-Optional: allow your current public IP for SQL (needed for local Prisma migrations):
+2. **Upload application secrets (optional)**
 
-```
-set ALLOW_MY_IP=true
-azure\scripts\run-all.bat
-```
+  Managed infrastructure secrets (Postgres connection string, Redis key, Service Bus connection) are created automatically during the Bicep deployment. Use Key Vault directly or add custom automation for application-specific secrets (e.g., `JWT_SECRET`). A refreshed script will be added later.
 
-Optional: run DB migrations by setting environment variables before the call (or inside your local overrides file):
+3. **Build & push container images**
 
-```
-set RUN_MIGRATIONS=true
-set DATABASE_URL=Server=tcp:<server>.database.windows.net,1433;Initial Catalog=<db>;User Id=<user>;Password=<pwd>;Encrypt=true;TrustServerCertificate=false;Connection Timeout=30;
-azure\scripts\run-all.bat
-```
+  ```cmd
+  cd services\api
+  npm install
+  npm run build
+  docker buildx build -t %AZ_API_IMAGE% .
+  docker push %AZ_API_IMAGE%
+  ```
 
-## Order of execution
+  Repeat for `services/finalizer` and `services/hold-cleaner`, adjust `%AZ_FINALIZER_IMAGE%` / `%AZ_HOLD_CLEANER_IMAGE%`, then redeploy the Bicep template (or update the Container Apps directly) to roll out the new images.
 
-1) Edit variables
+4. **Run Prisma migrations**
 
-- Open `00-az-variables.cmd` and fill in:
-  - `AZ_SUBSCRIPTION_ID`, `AZ_LOCATION`
-  - Resource names: `AZ_STORAGE`, `AZ_SQLSERVER`, `AZ_SQLPASSWORD`, `AZ_SQLDB`, `AZ_KEYVAULT`, `AZ_APPINSIGHTS`, `AZ_FUNCTIONAPP`, `AZ_SWA`
-  - Frontend build env: `VITE_API_URL`, `VITE_APPINSIGHTS_CONNECTION_STRING` (optional)
+  Retrieve the `POSTGRES_CONNECTION_STRING` secret from Key Vault and run:
 
-2) Provision core
+  ```cmd
+  set DATABASE_URL=<postgres-connection-string>
+  npx prisma migrate deploy
+  ```
 
-```
-azure\scripts\10-az-provision-core.cmd
-```
+  (Use `prisma/` schema with the new PostgreSQL provider.)
 
-3) Set Key Vault secrets
+## Orchestrator (`run-all.bat`)
 
-```
-azure\scripts\20-az-keyvault-secrets.cmd
-```
+`run-all.bat` currently calls `10-az-provision-core.cmd`. Validation for Key Vault secret seeding / Function Apps will be modernized in a subsequent iteration; set `DEPLOY_FUNCTIONS`, `RUN_MIGRATIONS`, etc., only if you still rely on the legacy Azure Functions path.
 
-4) Configure Function App settings (storage + KV references)
+## Notes & tips
 
-```
-azure\scripts\30-az-func-settings.cmd
-```
-
-5) Allow CORS for your Static Web App URL
-
-Once the SWA URL is known:
-
-```
-azure\scripts\40-az-cors.cmd https://<your-swa>.azurestaticapps.net
-```
-
-6) (Optional) Run Prisma migrations against the target DB
-
-Set `DATABASE_URL` in your shell to the production DB connection string (or use Key Vault to retrieve it), then:
-
-```
-set DATABASE_URL=Server=tcp:<server>.database.windows.net,1433;Initial Catalog=<db>;User Id=<user>;Password=<pwd>;Encrypt=true;TrustServerCertificate=false;Connection Timeout=30;
-azure\scripts\50-prisma-migrate.cmd
-
-Optional: deploy Azure Functions code after configuring settings:
-
-```
-set DEPLOY_FUNCTIONS=true
-azure\scripts\run-all.bat
-```
-```
-
-## Notes
-
-- If `az login` fails in a browser, try `az login --use-device-code`.
-- If a resource already exists, the scripts will continue where possible.
-- The Function App gets a system-assigned identity which is granted `get`/`list` on Key Vault secrets.
-- App settings are wired to Key Vault using `@Microsoft.KeyVault(SecretUri=...)` syntax.
-- Frontend should set `VITE_API_URL` to `https://<functionapp>.azurewebsites.net/api`.
- - Prisma migrations now run inside the `azure/functions` workspace automatically.
- - Application Insights setting name used: `APPLICATIONINSIGHTS_CONNECTION_STRING`.
+- Use `az account show` to confirm the active subscription before deploying.
+- When you need resource names with random suffixes (e.g., the storage account), run `az deployment group show --resource-group %AZ_RG% --name <deploymentName> --query properties.outputs` (use the name returned by `az deployment group create`) and copy the values into `00-az-variables.local.cmd`.
+- Container Apps managed identities receive Key Vault access automatically through the Bicep template.
+- Update `VITE_API_URL` with the external URL emitted by the API Container App output (`apiContainerAppName`).
+- To change scaling or cron cadence, modify the parameters in `main.bicep` before re-running the deployment.
+- Ensure your PostgreSQL password meets Azure’s complexity requirements (minimum length 16, mix of categories).

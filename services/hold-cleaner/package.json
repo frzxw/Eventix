@@ -1,0 +1,27 @@
+{
+  "name": "@eventix/hold-cleaner",
+  "version": "0.1.0",
+  "description": "Hold expiration cleanup job for Eventix",
+  "private": true,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc --project tsconfig.json",
+    "dev": "tsx watch src/index.ts",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "applicationinsights": "^3.3.2",
+    "ioredis": "^5.4.1",
+    "pino": "^8.21.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "pino-pretty": "^10.3.1",
+    "tslib": "^2.6.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.6.3",
+    "tsx": "^4.19.0"
+  }
+}

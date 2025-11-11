@@ -1,0 +1,148 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: eventix
+      POSTGRES_PASSWORD: eventix
+      POSTGRES_DB: eventix
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U eventix"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--save", "20", "1", "--loglevel", "warning"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    image: node:20-bullseye
+    working_dir: /workspace
+    command: sh -c "npm install && npm run dev"
+    ports:
+      - "8080:8080"
+    environment:
+      NODE_ENV: development
+      API_PORT: "8080"
+      API_HOST: "0.0.0.0"
+      POSTGRES_CONNECTION_STRING: "postgresql://eventix:eventix@postgres:5432/eventix?sslmode=disable"
+      REDIS_HOST: "redis"
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: ""
+      REDIS_TLS_ENABLED: "false"
+      REDIS_KEY_PREFIX: "eventix:dev:"
+      HOLD_TTL_SECONDS: "600"
+      HOLD_EXPIRATION_SCAN_LIMIT: "100"
+      IDEMPOTENCY_TTL_SECONDS: "900"
+      SERVICE_BUS_CONNECTION_STRING: "${SERVICE_BUS_CONNECTION_STRING:?SERVICE_BUS_CONNECTION_STRING not set}"
+      SERVICE_BUS_FINALIZATION_QUEUE: "${SERVICE_BUS_FINALIZATION_QUEUE:-order-queue}"
+      APPLICATION_INSIGHTS_CONNECTION_STRING: "${APPLICATION_INSIGHTS_CONNECTION_STRING:-}"
+      RATE_LIMIT_MAX: "300"
+      RATE_LIMIT_WINDOW: "PT1M"
+      CHOKIDAR_USEPOLLING: "1"
+    volumes:
+      - ./services/api:/workspace
+      - api-node_modules:/workspace/node_modules
+      - api-dist:/workspace/dist
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  finalizer:
+    image: node:20-bullseye
+    working_dir: /workspace
+    command: sh -c "npm install && npm run dev"
+    environment:
+      NODE_ENV: development
+      POSTGRES_CONNECTION_STRING: "postgresql://eventix:eventix@postgres:5432/eventix?sslmode=disable"
+      REDIS_HOST: "redis"
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: ""
+      REDIS_TLS_ENABLED: "false"
+      REDIS_KEY_PREFIX: "eventix:dev:"
+      SERVICE_BUS_CONNECTION_STRING: "${SERVICE_BUS_CONNECTION_STRING:?SERVICE_BUS_CONNECTION_STRING not set}"
+      SERVICE_BUS_FINALIZATION_QUEUE: "${SERVICE_BUS_FINALIZATION_QUEUE:-order-queue}"
+      WORKER_MAX_CONCURRENCY: "3"
+      APPLICATION_INSIGHTS_CONNECTION_STRING: "${APPLICATION_INSIGHTS_CONNECTION_STRING:-}"
+      CHOKIDAR_USEPOLLING: "1"
+    volumes:
+      - ./services/finalizer:/workspace
+      - finalizer-node_modules:/workspace/node_modules
+      - finalizer-dist:/workspace/dist
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  hold-cleaner:
+    image: node:20-bullseye
+    working_dir: /workspace
+    command: sh -c "npm install && npm run dev"
+    environment:
+      NODE_ENV: development
+      REDIS_HOST: "redis"
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: ""
+      REDIS_TLS_ENABLED: "false"
+      REDIS_KEY_PREFIX: "eventix:dev:"
+      HOLD_EXPIRATION_SCAN_LIMIT: "100"
+      HOLD_RELEASE_RETAIN_SECONDS: "600"
+      APPLICATION_INSIGHTS_CONNECTION_STRING: "${APPLICATION_INSIGHTS_CONNECTION_STRING:-}"
+      CHOKIDAR_USEPOLLING: "1"
+    volumes:
+      - ./services/hold-cleaner:/workspace
+      - hold-cleaner-node_modules:/workspace/node_modules
+      - hold-cleaner-dist:/workspace/dist
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  frontend:
+    image: node:20-bullseye
+    working_dir: /workspace
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 5173"
+    ports:
+      - "5173:5173"
+    environment:
+      NODE_ENV: development
+      VITE_API_URL: http://localhost:8080
+      CHOKIDAR_USEPOLLING: "1"
+    volumes:
+      - ./:/workspace
+      - frontend-node_modules:/workspace/node_modules
+      - frontend-dist:/workspace/dist
+    depends_on:
+      api:
+        condition: service_started
+
+volumes:
+  postgres-data:
+  redis-data:
+  api-node_modules:
+  api-dist:
+  finalizer-node_modules:
+  finalizer-dist:
+  hold-cleaner-node_modules:
+  hold-cleaner-dist:
+  frontend-node_modules:
+  frontend-dist:

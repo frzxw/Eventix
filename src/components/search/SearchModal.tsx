@@ -7,7 +7,7 @@ import { apiClient } from '../../lib/services/api-client';
 import { SEARCH as SEARCH_CONFIG } from '../../lib/constants';
 import { Button } from '../ui/button';
 import type { Event } from '../../lib/types';
-import { LoadingSpinner } from '../LoadingSpinner';
+import { SearchResultsSkeleton } from '../loading';
 
 interface SearchModalProps {
   isOpen: boolean;
@@ -155,9 +155,7 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
               {query.trim() ? (
                 <div className="p-4">
                   {isSearching ? (
-                    <div className="py-8 flex items-center justify-center">
-                      <LoadingSpinner size="sm" message="Searching events" />
-                    </div>
+                    <SearchResultsSkeleton />
                   ) : results.length > 0 ? (
                     <div className="space-y-2">
                       <p className="text-xs text-[var(--text-tertiary)] uppercase tracking-wide px-2 mb-3">

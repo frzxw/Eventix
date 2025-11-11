@@ -4,11 +4,11 @@ import { useMemo } from 'react';
 import { Ticket as TicketIcon, Clock, CheckCircle2, RefreshCcw, AlertCircle } from 'lucide-react';
 import { WalletTicket } from '../components/tickets/WalletTicket';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
-import { LoadingSpinner } from '../components/LoadingSpinner';
 import { Button } from '../components/ui/button';
 import { useMyTickets } from '../lib/hooks/useMyTickets';
 import { useAuth } from '../context/AuthContext';
 import { StatusNotice } from '../components/common/StatusNotice';
+import { TicketListSkeleton } from '../components/loading';
 
 export function MyTicketsPage() {
   const navigate = useNavigate();
@@ -194,9 +194,7 @@ export function MyTicketsPage() {
             </div>
           </motion.div>
         ) : isLoading ? (
-          <div className="py-12">
-            <LoadingSpinner message="Fetching your tickets" />
-          </div>
+          <TicketListSkeleton items={3} />
         ) : (
           <motion.div
             initial={{ opacity: 0, y: 20 }}

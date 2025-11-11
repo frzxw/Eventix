@@ -6,7 +6,7 @@ import { EventCarousel } from '../components/home/EventCarousel';
 import { CategoryGrid } from '../components/home/CategoryGrid';
 import { EventCard } from '../components/events/EventCard';
 import { SEOHead } from '../components/SEOHead';
-import { LoadingSpinner } from '../components/LoadingSpinner';
+import { EventGridSkeleton } from '../components/loading';
 import { mockEvents, getFeaturedEvents } from '../lib/mock-data';
 import { apiClient } from '../lib/services/api-client';
 import type { Event } from '../lib/types';
@@ -104,9 +104,7 @@ export function HomePage() {
           </motion.div>
 
           {isLoading ? (
-            <div className="py-12">
-              <LoadingSpinner message="Fetching the latest events" />
-            </div>
+            <EventGridSkeleton count={8} />
           ) : allEvents.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
               {allEvents.slice(0, 8).map((event, index) => (

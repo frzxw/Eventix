@@ -1,13 +1,14 @@
 import { motion } from 'motion/react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useMemo } from 'react';
-import { Ticket as TicketIcon, Clock, CheckCircle2, RefreshCcw } from 'lucide-react';
+import { Ticket as TicketIcon, Clock, CheckCircle2, RefreshCcw, AlertCircle } from 'lucide-react';
 import { WalletTicket } from '../components/tickets/WalletTicket';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { Button } from '../components/ui/button';
 import { useMyTickets } from '../lib/hooks/useMyTickets';
 import { useAuth } from '../context/AuthContext';
+import { StatusNotice } from '../components/common/StatusNotice';
 
 export function MyTicketsPage() {
   const navigate = useNavigate();
@@ -129,46 +130,39 @@ export function MyTicketsPage() {
           transition={{ duration: 0.5 }}
           className="mb-8 sm:mb-12"
         >
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl mb-3" style={{ fontWeight: 'var(--font-weight-medium)' }}>
-                My Tickets
-              </h1>
-              <p className="text-[var(--text-secondary)] text-sm sm:text-base max-w-2xl">
-                Manage and view all your event tickets in one place.
-              </p>
-              {highlightedOrderId && (
-                <motion.p
-                  initial={{ opacity: 0, y: -6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4 }}
-                  className="text-xs text-[var(--primary-400)] mt-2"
-                >
-                  Order {highlightedOrderId} has been added to your wallet.
-                </motion.p>
-              )}
-              {error && (
-                <motion.p
-                  initial={{ opacity: 0, y: -6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4 }}
-                  className="text-xs text-[var(--warning)] mt-2"
-                >
-                  {error}
-                </motion.p>
-              )}
-            </div>
-            <Button
-              variant="outline"
-              onClick={refresh}
-              className="inline-flex items-center gap-2 rounded-full glass-hover transition-smooth focus-ring"
-              disabled={isLoading}
-            >
-              <RefreshCcw className="w-4 h-4" aria-hidden="true" />
-              Refresh
-            </Button>
+          <div className="space-y-3">
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl mb-3" style={{ fontWeight: 'var(--font-weight-medium)' }}>
+              My Tickets
+            </h1>
+            <p className="text-[var(--text-secondary)] text-sm sm:text-base max-w-2xl">
+              Manage and view all your event tickets in one place.
+            </p>
+            {highlightedOrderId && (
+              <motion.p
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4 }}
+                className="text-xs text-[var(--primary-400)] mt-2"
+              >
+                Order {highlightedOrderId} has been added to your wallet.
+              </motion.p>
+            )}
           </div>
         </motion.div>
+
+        {isAuthenticated && !isLoading && error && (
+          <div className="mb-8">
+            <StatusNotice
+              icon={AlertCircle}
+              tone="error"
+              title="We couldn’t refresh your tickets"
+              description={error}
+              actionLabel="Try Again"
+              onAction={refresh}
+              actionDisabled={isLoading}
+            />
+          </div>
+        )}
 
         {!isAuthenticated ? (
           <motion.div
@@ -183,9 +177,21 @@ export function MyTicketsPage() {
             <p className="text-[var(--text-secondary)] max-w-md mx-auto mb-6">
               Log in with your Eventix account to access your upcoming and past tickets.
             </p>
-            <Button onClick={() => navigate('/auth/login')} className="rounded-full px-6" size="lg">
-              Go to Login
-            </Button>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-center justify-center">
+              <Button onClick={() => navigate('/auth/login')} className="rounded-full px-6" size="lg">
+                Go to Login
+              </Button>
+              <Button
+                variant="outline"
+                className="rounded-full px-6"
+                size="lg"
+                onClick={refresh}
+                disabled={isLoading}
+              >
+                <RefreshCcw className="mr-2 h-4 w-4" aria-hidden="true" />
+                Refresh
+              </Button>
+            </div>
           </motion.div>
         ) : isLoading ? (
           <div className="py-12">

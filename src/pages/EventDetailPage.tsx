@@ -1,6 +1,6 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import { EventDetail } from '../components/events/EventDetail';
-import { LoadingSpinner } from '../components/LoadingSpinner';
+import { EventDetailSkeleton } from '../components/loading';
 import { useEvent } from '../lib/hooks/useEvent';
 
 export function EventDetailPage() {
@@ -10,9 +10,7 @@ export function EventDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <LoadingSpinner size="lg" message="Loading event details" />
-      </div>
+      <EventDetailSkeleton />
     );
   }
 

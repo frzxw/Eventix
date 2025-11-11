@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { BookingStep1, type TicketSelection } from '../components/booking/BookingStep1';
 import { BookingStep2, type AttendeeInfo } from '../components/booking/BookingStep2';
 import { BookingStep3 } from '../components/booking/BookingStep3';
-import { LoadingSpinner } from '../components/LoadingSpinner';
+import { EventDetailSkeleton } from '../components/loading';
 import { useEvent } from '../lib/hooks/useEvent';
 
 type BookingStep = 1 | 2 | 3;
@@ -17,11 +17,7 @@ export function SelectTicketsPage() {
   const { event, isLoading, error } = useEvent(eventId);
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <LoadingSpinner size="lg" message="Preparing ticket selection" />
-      </div>
-    );
+    return <EventDetailSkeleton />;
   }
 
   if (!event) {

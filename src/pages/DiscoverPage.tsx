@@ -4,7 +4,7 @@ import { EventCard } from '../components/events/EventCard';
 import { FilterSidebar, type FilterState } from '../components/events/FilterSidebar';
 import { mockEvents } from '../lib/mock-data';
 import { Button } from '../components/ui/button';
-import { Filter } from 'lucide-react';
+import { Filter, AlertTriangle } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Pagination,
@@ -16,8 +16,9 @@ import {
   PaginationPrevious,
 } from '../components/ui/pagination';
 import { apiClient } from '../lib/services/api-client';
-import { LoadingSpinner } from '../components/LoadingSpinner';
+import { EventGridSkeleton } from '../components/loading';
 import type { Event, EventCategory } from '../lib/types';
+import { StatusNotice } from '../components/common/StatusNotice';
 
 const MAX_PRICE = 10000000;
 const EVENT_CATEGORIES: EventCategory[] = ['concert', 'festival', 'theater', 'comedy', 'sports', 'other'];
@@ -174,15 +175,6 @@ export function DiscoverPage() {
                 }
               </motion.p>
             )}
-            {error && (
-              <motion.p
-                initial={{ opacity: 0, y: -6 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="text-xs text-[var(--warning)] mt-2"
-              >
-                {error}
-              </motion.p>
-            )}
           </div>
           <Button
             variant="outline"
@@ -222,10 +214,22 @@ export function DiscoverPage() {
 
           {/* Events Grid with Pagination */}
           <div className="lg:col-span-3 space-y-8">
+            {!isLoading && error && (
+              <StatusNotice
+                icon={AlertTriangle}
+                tone="warning"
+                title="Showing curated events"
+                description={error}
+                actionLabel="Try Again"
+                onAction={() => {
+                  void fetchEvents();
+                }}
+                actionDisabled={isLoading}
+              />
+            )}
+
             {isLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <LoadingSpinner message="Loading events" />
-              </div>
+              <EventGridSkeleton count={eventsPerPage} />
             ) : events.length === 0 ? (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}

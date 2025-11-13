@@ -62,9 +62,9 @@ The Bicep template injects the following configuration via secrets:
 
 | Secret | Source |
 |--------|--------|
-| `POSTGRES_CONNECTION_STRING` | Azure Key Vault (`POSTGRES_CONNECTION_STRING`) |
-| `SERVICE_BUS_CONNECTION_STRING` | Key Vault (`SERVICE_BUS_CONNECTION_STRING`) |
-| `REDIS_PASSWORD` | Key Vault (`REDIS_PRIMARY_KEY`) |
+| `POSTGRES_CONNECTION_STRING` | Azure Key Vault (`postgres-connection-string`) |
+| `SERVICE_BUS_CONNECTION_STRING` | Key Vault (`service-bus-connection-string`) |
+| `REDIS_PASSWORD` | Key Vault (`redis-primary-key`) |
 | `APPLICATION_INSIGHTS_CONNECTION_STRING` | App Insights resource |
 
 Additional application secrets (JWT signing keys, payment providers, etc.) can be seeded with `azure\scripts\20-az-keyvault-secrets.cmd` or managed directly in Key Vault.

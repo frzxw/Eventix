@@ -215,21 +215,21 @@ resource serviceBusRootAuth 'Microsoft.ServiceBus/namespaces/authorizationRules@
 }
 
 resource serviceBusConnectionSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
-  name: '${keyVault.name}/SERVICE_BUS_CONNECTION_STRING'
+  name: '${keyVault.name}/service-bus-connection-string'
   properties: {
     value: listKeys(serviceBusRootAuth.id, '2022-10-01-preview').primaryConnectionString
   }
 }
 
 resource redisPrimaryKeySecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
-  name: '${keyVault.name}/REDIS_PRIMARY_KEY'
+  name: '${keyVault.name}/redis-primary-key'
   properties: {
     value: cacheForRedis.listKeys().primaryKey
   }
 }
 
 resource postgresConnectionSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
-  name: '${keyVault.name}/POSTGRES_CONNECTION_STRING'
+  name: '${keyVault.name}/postgres-connection-string'
   properties: {
     value: format('postgresql://{0}:{1}@{2}:5432/{3}?sslmode=require', postgresAdminUser, uriComponent(postgresAdminPassword), postgresServer.properties.fullyQualifiedDomainName, postgresDatabaseName)
   }
@@ -307,15 +307,15 @@ resource apiContainerApp 'Microsoft.App/containerApps@2023-05-01' = {
         }
         {
           name: 'postgres-connection-string'
-          value: format('@Microsoft.KeyVault(VaultName={0};SecretName=POSTGRES_CONNECTION_STRING)', keyVault.name)
+          value: format('@Microsoft.KeyVault(VaultName={0};SecretName=postgres-connection-string)', keyVault.name)
         }
         {
           name: 'service-bus-connection'
-          value: format('@Microsoft.KeyVault(VaultName={0};SecretName=SERVICE_BUS_CONNECTION_STRING)', keyVault.name)
+          value: format('@Microsoft.KeyVault(VaultName={0};SecretName=service-bus-connection-string)', keyVault.name)
         }
         {
           name: 'redis-password'
-          value: format('@Microsoft.KeyVault(VaultName={0};SecretName=REDIS_PRIMARY_KEY)', keyVault.name)
+          value: format('@Microsoft.KeyVault(VaultName={0};SecretName=redis-primary-key)', keyVault.name)
         }
         {
           name: 'application-insights-connection'
@@ -442,15 +442,15 @@ resource finalizerContainerApp 'Microsoft.App/containerApps@2023-05-01' = {
         }
         {
           name: 'postgres-connection-string'
-          value: format('@Microsoft.KeyVault(VaultName={0};SecretName=POSTGRES_CONNECTION_STRING)', keyVault.name)
+          value: format('@Microsoft.KeyVault(VaultName={0};SecretName=postgres-connection-string)', keyVault.name)
         }
         {
           name: 'service-bus-connection'
-          value: format('@Microsoft.KeyVault(VaultName={0};SecretName=SERVICE_BUS_CONNECTION_STRING)', keyVault.name)
+          value: format('@Microsoft.KeyVault(VaultName={0};SecretName=service-bus-connection-string)', keyVault.name)
         }
         {
           name: 'redis-password'
-          value: format('@Microsoft.KeyVault(VaultName={0};SecretName=REDIS_PRIMARY_KEY)', keyVault.name)
+          value: format('@Microsoft.KeyVault(VaultName={0};SecretName=redis-primary-key)', keyVault.name)
         }
         {
           name: 'application-insights-connection'
@@ -565,7 +565,7 @@ resource holdCleanerJob 'Microsoft.App/jobs@2023-05-01' = {
         }
         {
           name: 'redis-password'
-          value: format('@Microsoft.KeyVault(VaultName={0};SecretName=REDIS_PRIMARY_KEY)', keyVault.name)
+          value: format('@Microsoft.KeyVault(VaultName={0};SecretName=redis-primary-key)', keyVault.name)
         }
         {
           name: 'application-insights-connection'
@@ -754,11 +754,11 @@ resource functionApp 'Microsoft.Web/sites@2023-01-01' = {
         }
         {
           name: 'DATABASE_URL'
-          value: format('@Microsoft.KeyVault(VaultName={0};SecretName=POSTGRES_CONNECTION_STRING)', keyVault.name)
+          value: format('@Microsoft.KeyVault(VaultName={0};SecretName=postgres-connection-string)', keyVault.name)
         }
         {
           name: 'SERVICE_BUS_CONNECTION_STRING'
-          value: format('@Microsoft.KeyVault(VaultName={0};SecretName=SERVICE_BUS_CONNECTION_STRING)', keyVault.name)
+          value: format('@Microsoft.KeyVault(VaultName={0};SecretName=service-bus-connection-string)', keyVault.name)
         }
         {
           name: 'SERVICE_BUS_FINALIZATION_QUEUE'

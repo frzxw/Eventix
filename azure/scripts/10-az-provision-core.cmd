@@ -3,7 +3,12 @@ setlocal
 call "%~dp0\00-az-variables.cmd"
 
 echo Logging into Azure (use az login --use-device-code if browser fails)...
-az login || az login --use-device-code || (echo Login failed. && exit /b 1)
+az account show >nul 2>&1
+if errorlevel 1 (
+  az login || az login --use-device-code || (echo Login failed. && exit /b 1)
+) else (
+  echo Azure CLI session already active. Skipping az login.
+)
 
 if not "%AZ_SUBSCRIPTION_ID%"=="" (
   echo Setting subscription %AZ_SUBSCRIPTION_ID% ...
@@ -12,6 +17,11 @@ if not "%AZ_SUBSCRIPTION_ID%"=="" (
 
 if "%AZ_PG_ADMIN_PASSWORD%"=="" (
   echo ERROR: AZ_PG_ADMIN_PASSWORD is empty. Set it in 00-az-variables.local.cmd and re-run.
+  exit /b 1
+)
+
+if "%AZ_DEPLOYER_OBJECT_ID%"=="" (
+  echo ERROR: AZ_DEPLOYER_OBJECT_ID is empty. Set it in 00-az-variables.local.cmd (use az ad signed-in-user show) and re-run.
   exit /b 1
 )
 
@@ -29,6 +39,7 @@ az deployment group create ^
     apiContainerImage=%AZ_API_IMAGE% ^
     finalizerContainerImage=%AZ_FINALIZER_IMAGE% ^
     holdCleanerContainerImage=%AZ_HOLD_CLEANER_IMAGE% ^
+  deployerObjectId=%AZ_DEPLOYER_OBJECT_ID% ^
     postgresAdminUser=%AZ_PG_ADMIN_USER% ^
     postgresAdminPassword=%AZ_PG_ADMIN_PASSWORD% || exit /b 1
 

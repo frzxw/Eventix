@@ -9,7 +9,8 @@ set AZ_ENVIRONMENT=prod
 REM Core resource names
 set AZ_RG=eventix-rg
 REM Populate AZ_STORAGE after the first deployment using the storageAccountName output
-set AZ_STORAGE=
+set AZ_STORAGE=eventixfuncstore6ncpj7
+set AZ_DEPLOYER_OBJECT_ID=
 set AZ_KEYVAULT=eventix-kv-%AZ_ENVIRONMENT%
 set AZ_APPINSIGHTS=eventix-insights-%AZ_ENVIRONMENT%
 set AZ_CONTAINERAPPS_ENV=eventix-cae-%AZ_ENVIRONMENT%
@@ -22,9 +23,9 @@ set AZ_POSTGRES_SERVER=eventix-pg-%AZ_ENVIRONMENT%
 set AZ_POSTGRES_DB=eventix-db
 
 REM Container image tags (override after pushing to ACR)
-set AZ_API_IMAGE=
-set AZ_FINALIZER_IMAGE=
-set AZ_HOLD_CLEANER_IMAGE=
+set AZ_API_IMAGE=eventixacr6ncpj7.azurecr.io/eventix-api:latest
+set AZ_FINALIZER_IMAGE=eventixacr6ncpj7.azurecr.io/eventix-finalizer:latest
+set AZ_HOLD_CLEANER_IMAGE=eventixacr6ncpj7.azurecr.io/eventix-hold-cleaner:latest
 
 REM PostgreSQL credentials (set secure values in local override)
 set AZ_PG_ADMIN_USER=eventix_admin

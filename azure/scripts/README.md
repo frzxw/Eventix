@@ -43,7 +43,7 @@ Windows-friendly wrappers for deploying the Eventix production stack to Azure Co
 
 4. **Run Prisma migrations**
 
-  Retrieve the `POSTGRES_CONNECTION_STRING` secret from Key Vault and run:
+  Retrieve the `postgres-connection-string` secret from Key Vault and run:
 
   ```cmd
   set DATABASE_URL=<postgres-connection-string>

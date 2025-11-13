@@ -10,8 +10,18 @@ import axios, {
   InternalAxiosRequestConfig,
   AxiosResponse,
 } from 'axios';
-import { API, AUTH, ENVIRONMENT } from '../constants';
+import { API, ENVIRONMENT } from '../constants';
 import { logger } from './logger';
+import {
+  AuthStoredUser,
+  clearStoredUser,
+  clearTokens,
+  getAccessToken,
+  getRefreshToken,
+  getTokenStoragePreference,
+  setStoredUser,
+  setTokens,
+} from '@/lib/auth';
 
 // Request interceptor for adding auth tokens
 type RequestConfig = AxiosRequestConfig & {
@@ -39,7 +49,7 @@ class AzureApiClient {
     // Request interceptor - add auth token
     this.client.interceptors.request.use(
       (config: InternalAxiosRequestConfig) => {
-        const token = this.getAuthToken();
+        const token = getAccessToken();
         if (token && config.headers) {
           config.headers.Authorization = `Bearer ${token}`;
         }
@@ -78,7 +88,7 @@ class AzureApiClient {
         if (axiosError.response?.status === 401 && !(config?._retry)) {
           config._retry = 1;
           
-          const refreshToken = this.getRefreshToken();
+          const refreshToken = getRefreshToken();
           if (refreshToken) {
             try {
               const response = await this.client.post('/auth/refresh-token', {
@@ -97,8 +107,11 @@ class AzureApiClient {
                 throw new Error('Invalid refresh token response');
               }
 
-              this.setAuthToken(newAccessToken);
-              this.setRefreshToken(newRefreshToken);
+              const preference = getTokenStoragePreference();
+              setTokens(
+                { accessToken: newAccessToken, refreshToken: newRefreshToken },
+                preference ? { storagePreference: preference } : undefined,
+              );
               
               // Retry original request
               if (config.headers) {
@@ -136,26 +149,25 @@ class AzureApiClient {
 
   // ==================== Auth Token Management ====================
 
-  private getAuthToken(): string | null {
-    return localStorage.getItem(AUTH.TOKEN_STORAGE_KEY);
-  }
-
-  private getRefreshToken(): string | null {
-    return localStorage.getItem(AUTH.REFRESH_TOKEN_STORAGE_KEY);
-  }
-
-  private setAuthToken(token: string): void {
-    localStorage.setItem(AUTH.TOKEN_STORAGE_KEY, token);
-  }
-
-  private setRefreshToken(token: string): void {
-    localStorage.setItem(AUTH.REFRESH_TOKEN_STORAGE_KEY, token);
-  }
-
   private clearAuthTokens(): void {
-    localStorage.removeItem(AUTH.TOKEN_STORAGE_KEY);
-    localStorage.removeItem(AUTH.REFRESH_TOKEN_STORAGE_KEY);
-    localStorage.removeItem(AUTH.USER_STORAGE_KEY);
+    clearTokens();
+    clearStoredUser();
+  }
+
+  private normaliseUser(user: unknown): AuthStoredUser | null {
+    if (!user || typeof user !== 'object') {
+      return null;
+    }
+    const candidate = user as Record<string, unknown>;
+    if (typeof candidate.id !== 'string') {
+      return null;
+    }
+    return {
+      id: candidate.id,
+      email: typeof candidate.email === 'string' ? candidate.email : undefined,
+      firstName: typeof candidate.firstName === 'string' ? candidate.firstName : undefined,
+      lastName: typeof candidate.lastName === 'string' ? candidate.lastName : undefined,
+    };
   }
 
   // ==================== Circuit Breaker ====================
@@ -185,13 +197,24 @@ class AzureApiClient {
       firstName,
       lastName,
     });
-    
-    const { token, refreshToken, user } = response.data;
-    this.setAuthToken(token);
-    this.setRefreshToken(refreshToken);
-    localStorage.setItem(AUTH.USER_STORAGE_KEY, JSON.stringify(user));
-    
-    logger.info('User signed up successfully', { userId: user.id });
+    const payload = (response.data?.data ?? response.data) as {
+      token?: string;
+      accessToken?: string;
+      refreshToken?: string;
+      user?: unknown;
+    };
+    const accessToken = payload.accessToken ?? payload.token;
+    const refreshToken = payload.refreshToken;
+    const user = this.normaliseUser(payload.user);
+
+    if (accessToken && refreshToken) {
+      setTokens({ accessToken, refreshToken }, { storagePreference: 'local' });
+    }
+    if (user) {
+      setStoredUser(user, { storagePreference: 'local' });
+      logger.info('User signed up successfully', { userId: user.id });
+    }
+
     return response.data;
   }
 
@@ -200,13 +223,24 @@ class AzureApiClient {
       email,
       password,
     });
-    
-    const { token, refreshToken, user } = response.data;
-    this.setAuthToken(token);
-    this.setRefreshToken(refreshToken);
-    localStorage.setItem(AUTH.USER_STORAGE_KEY, JSON.stringify(user));
-    
-    logger.info('User logged in successfully', { userId: user.id });
+    const payload = (response.data?.data ?? response.data) as {
+      token?: string;
+      accessToken?: string;
+      refreshToken?: string;
+      user?: unknown;
+    };
+    const accessToken = payload.accessToken ?? payload.token;
+    const refreshToken = payload.refreshToken;
+    const user = this.normaliseUser(payload.user);
+
+    if (accessToken && refreshToken) {
+      setTokens({ accessToken, refreshToken }, { storagePreference: 'local' });
+    }
+    if (user) {
+      setStoredUser(user, { storagePreference: 'local' });
+      logger.info('User logged in successfully', { userId: user.id });
+    }
+
     return response.data;
   }
 

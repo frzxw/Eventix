@@ -6,6 +6,7 @@ import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { toast } from 'sonner';
+import { apiClient } from '@/lib/services/api-client';
 
 export function ForgotPasswordPage() {
   const navigate = useNavigate();
@@ -16,16 +17,24 @@ export function ForgotPasswordPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    const { error } = await apiClient.auth.forgotPassword(email.trim());
+    setIsLoading(false);
 
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
-      setEmailSent(true);
-      toast.success('Password reset link sent!');
-    }, 1500);
+    if (error) {
+      toast.error(typeof error === 'string' ? error : 'Unable to send reset link right now. Please try again later.');
+      return;
+    }
+
+    setEmailSent(true);
+    toast.success('Password reset link sent!');
   };
 
-  const handleResend = () => {
+  const handleResend = async () => {
+    const { error } = await apiClient.auth.forgotPassword(email.trim());
+    if (error) {
+      toast.error(typeof error === 'string' ? error : 'Unable to resend reset link right now.');
+      return;
+    }
     toast.success('Email resent successfully!');
   };
 

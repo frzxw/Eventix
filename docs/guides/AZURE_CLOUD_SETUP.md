@@ -87,10 +87,9 @@ eventix/
 ├── AZURE_DEPLOYMENT.md              # Deployment guide
 └── package.json                     # Dependencies with Azure SDKs
 ```
-
-## 🔧 Configuration
-
-### Environment Variables
+az acr login --name eventixacr
+docker build -t eventixacr.azurecr.io/eventix-api:latest ./api
+docker push eventixacr.azurecr.io/eventix-api:latest
 
 Create `.env.production` based on `.env.example`:
 

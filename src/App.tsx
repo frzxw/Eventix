@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { Header } from './components/layout/Header';
@@ -24,6 +25,7 @@ import { ContactPage } from './pages/ContactPage';
 import { Toaster } from './components/ui/sonner';
 import { AuthProvider } from '@/context/AuthContext';
 import MockPaymentPage from './pages/MockPaymentPage';
+import { azureMonitoring } from '@/lib/services';
 
 // Animation variants
 const pageVariants = {
@@ -259,6 +261,11 @@ function AnimatedRoutes() {
 function AppContent() {
   const location = useLocation();
   const isAuthPage = location.pathname.startsWith('/auth');
+
+  useEffect(() => {
+    azureMonitoring.trackPageView(document.title, window.location.href, undefined, undefined, false);
+    azureMonitoring.trackEvent('page_view', { path: location.pathname });
+  }, [location.pathname]);
 
   return (
     <div className="min-h-screen flex flex-col">

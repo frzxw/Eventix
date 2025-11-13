@@ -278,6 +278,7 @@ export const auth = {
     password: string;
     firstName: string;
     lastName: string;
+    phoneNumber?: string;
   }): Promise<{ data?: any; error?: string }> {
     const res = await request<any>("/auth/signup", {
       method: "POST",
@@ -310,6 +311,35 @@ export const auth = {
       };
     }
     return res as any;
+  },
+
+  /**
+   * POST /api/auth/logout
+   */
+  async logout(): Promise<{ data?: any; error?: string }> {
+    return request("/auth/logout", {
+      method: "POST",
+    });
+  },
+
+  /**
+   * POST /api/auth/forgot-password
+   */
+  async forgotPassword(email: string): Promise<{ data?: any; error?: string }> {
+    return request("/auth/forgot-password", {
+      method: "POST",
+      body: { email },
+    });
+  },
+
+  /**
+   * POST /api/auth/verify-email
+   */
+  async verifyEmail(token: string): Promise<{ data?: any; error?: string }> {
+    return request("/auth/verify-email", {
+      method: "POST",
+      body: { token },
+    });
   },
 };
 

@@ -22,9 +22,9 @@ set AZ_POSTGRES_SERVER=eventix-pg-%AZ_ENVIRONMENT%
 set AZ_POSTGRES_DB=eventix-db
 
 REM Container image tags (override after pushing to ACR)
-set AZ_API_IMAGE=ghcr.io/your-org/eventix-api:latest
-set AZ_FINALIZER_IMAGE=ghcr.io/your-org/eventix-finalizer:latest
-set AZ_HOLD_CLEANER_IMAGE=ghcr.io/your-org/eventix-hold-cleaner:latest
+set AZ_API_IMAGE=
+set AZ_FINALIZER_IMAGE=
+set AZ_HOLD_CLEANER_IMAGE=
 
 REM PostgreSQL credentials (set secure values in local override)
 set AZ_PG_ADMIN_USER=eventix_admin

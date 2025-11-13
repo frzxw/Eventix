@@ -8,6 +8,8 @@
     "JWT_EXPIRY": "15m",
     "JWT_REFRESH_EXPIRY": "7d",
     "BCRYPT_ROUNDS": "12",
-    "DATABASE_URL": "postgresql://eventix:eventix@localhost:5432/eventix?schema=public"
+    "DATABASE_URL": "postgresql://eventix:eventix@localhost:5432/eventix?schema=public",
+    "SERVICE_BUS_CONNECTION_STRING": "Endpoint=sb://eventix-sb-namespace.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=<key>",
+    "SERVICE_BUS_FINALIZATION_QUEUE": "order-queue"
   }
 }

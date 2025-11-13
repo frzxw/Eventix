@@ -17,6 +17,7 @@
     "handlers/events.ts",
     "handlers/orders.ts",
     "handlers/tickets.ts",
+    "finalize-order/index.ts",
     "utils/**/*.ts",
     "prisma.ts"
   ],

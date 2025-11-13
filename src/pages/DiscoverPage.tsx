@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { EventCard } from '../components/events/EventCard';
 import { FilterSidebar, type FilterState } from '../components/events/FilterSidebar';
@@ -15,10 +15,10 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '../components/ui/pagination';
-import { apiClient } from '../lib/services/api-client';
 import { EventGridSkeleton } from '../components/loading';
 import type { Event, EventCategory } from '../lib/types';
 import { StatusNotice } from '../components/common/StatusNotice';
+import { useEventsQuery } from '@/lib/hooks/useEvents';
 
 const MAX_PRICE = 10000000;
 const EVENT_CATEGORIES: EventCategory[] = ['concert', 'festival', 'theater', 'comedy', 'sports', 'other'];
@@ -71,11 +71,6 @@ export function DiscoverPage() {
 
   const [searchQuery, setSearchQuery] = useState<string>(initialSearch);
   const [filters, setFilters] = useState<FilterState>(() => createFilterState(initialCategory));
-  const [events, setEvents] = useState<Event[]>([]);
-  const [totalEvents, setTotalEvents] = useState(0);
-  const [totalPages, setTotalPages] = useState(1);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   // Handle category from URL params
   useEffect(() => {
@@ -110,50 +105,45 @@ export function DiscoverPage() {
     setCurrentPage(1);
   };
 
-  const fetchEvents = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
+  const selectedCategory = filters.categories[0] ?? undefined;
+  const selectedCity = filters.cities[0] ?? undefined;
+  const minPrice = filters.priceRange[0] > 0 ? filters.priceRange[0] : undefined;
+  const maxPrice = filters.priceRange[1] < MAX_PRICE ? filters.priceRange[1] : undefined;
 
-    const category = filters.categories[0];
-    const city = filters.cities[0];
-    const minPrice = filters.priceRange[0] > 0 ? filters.priceRange[0] : undefined;
-    const maxPrice = filters.priceRange[1] < MAX_PRICE ? filters.priceRange[1] : undefined;
+  const eventsQuery = useEventsQuery({
+    category: selectedCategory,
+    city: selectedCity,
+    minPrice,
+    maxPrice,
+    search: searchQuery || undefined,
+    page: currentPage,
+    limit: eventsPerPage,
+    sort: 'date',
+  });
 
-    const response = await apiClient.events.getAll({
-      category,
-      city,
-      minPrice,
-      maxPrice,
-      search: searchQuery || undefined,
-      page: currentPage,
-      limit: eventsPerPage,
-      sort: 'date',
-    });
-
-    if (response.data) {
-      setEvents(response.data.events);
-      setTotalEvents(response.data.total);
-      setTotalPages(response.data.totalPages);
-      setError(null);
-    } else {
-      const fallback = filterMockEvents(filters, searchQuery);
-      const fallbackTotal = fallback.length;
-      const paginatedFallback = fallback.slice(
-        (currentPage - 1) * eventsPerPage,
-        currentPage * eventsPerPage
-      );
-      setEvents(paginatedFallback);
-      setTotalEvents(fallbackTotal);
-      setTotalPages(Math.max(Math.ceil(fallbackTotal / eventsPerPage), 1));
-      setError(response.error ?? 'Unable to fetch events. Showing sample data.');
+  const fallbackData = useMemo(() => {
+    if (!eventsQuery.isError) {
+      return null;
     }
+    const filtered = filterMockEvents(filters, searchQuery);
+    const paginated = filtered.slice((currentPage - 1) * eventsPerPage, currentPage * eventsPerPage);
+    return {
+      events: paginated,
+      total: filtered.length,
+      totalPages: Math.max(Math.ceil(filtered.length / eventsPerPage), 1),
+    };
+  }, [eventsQuery.isError, filters, searchQuery, currentPage]);
 
-    setIsLoading(false);
-  }, [filters, searchQuery, currentPage]);
-
-  useEffect(() => {
-    fetchEvents();
-  }, [fetchEvents]);
+  const events = eventsQuery.data?.events ?? fallbackData?.events ?? [];
+  const totalEvents = eventsQuery.data?.total ?? fallbackData?.total ?? 0;
+  const totalPages = eventsQuery.data?.totalPages ?? fallbackData?.totalPages ?? 1;
+  const isLoading = eventsQuery.isPending;
+  const isFetching = eventsQuery.isFetching;
+  const error = eventsQuery.isError
+    ? eventsQuery.error instanceof Error
+      ? eventsQuery.error.message
+      : 'Unable to fetch events. Showing curated selection.'
+    : null;
 
   return (
     <section className="py-8 sm:py-12 min-h-screen">
@@ -222,9 +212,9 @@ export function DiscoverPage() {
                 description={error}
                 actionLabel="Try Again"
                 onAction={() => {
-                  void fetchEvents();
+                  void eventsQuery.refetch();
                 }}
-                actionDisabled={isLoading}
+                actionDisabled={isLoading || isFetching}
               />
             )}
 

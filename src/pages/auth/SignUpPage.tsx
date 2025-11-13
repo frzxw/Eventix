@@ -8,9 +8,11 @@ import { Label } from '../../components/ui/label';
 import { Checkbox } from '../../components/ui/checkbox';
 import { PhoneInput } from '../../components/ui/phone-input';
 import { toast } from 'sonner';
+import { useAuth } from '@/context/AuthContext';
 
 export function SignUpPage() {
   const navigate = useNavigate();
+  const { signup } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -59,13 +61,31 @@ export function SignUpPage() {
     }
 
     setIsLoading(true);
+    const result = await signup({
+      email: formData.email.trim(),
+      password: formData.password,
+      firstName: formData.firstName.trim(),
+      lastName: formData.lastName.trim(),
+      phoneNumber: formData.phone || undefined,
+      remember: true,
+    });
 
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
-      toast.success('Account created successfully!');
-      navigate('/auth/verify-email', { state: { email: formData.email } });
-    }, 1500);
+    setIsLoading(false);
+
+    if (result.error) {
+      const message = result.error === 'USER_EXISTS'
+        ? 'An account already exists with this email.'
+        : result.error === 'WEAK_PASSWORD'
+          ? 'Password must meet the minimum strength requirements.'
+          : typeof result.error === 'string'
+            ? result.error
+            : 'Unable to create your account at the moment.';
+      toast.error(message);
+      return;
+    }
+
+    toast.success('Account created successfully! Please verify your email.');
+    navigate('/auth/verify-email', { state: { email: formData.email.trim() } });
   };
 
   const handleSocialSignUp = (provider: string) => {

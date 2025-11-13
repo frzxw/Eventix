@@ -7,9 +7,11 @@ import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Checkbox } from '../../components/ui/checkbox';
 import { toast } from 'sonner';
+import { useAuth } from '@/context/AuthContext';
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
@@ -21,13 +23,16 @@ export function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    const result = await login(formData.email.trim(), formData.password, { remember: rememberMe });
+    setIsLoading(false);
 
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
-      toast.success('Welcome back to Eventix!');
-      navigate('/');
-    }, 1500);
+    if (result.error) {
+      toast.error(result.error === 'INVALID_CREDENTIALS' ? 'Invalid email or password. Please try again.' : result.error);
+      return;
+    }
+
+    toast.success('Welcome back to Eventix!');
+    navigate('/');
   };
 
   const handleSocialLogin = (provider: string) => {

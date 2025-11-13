@@ -4,6 +4,7 @@ import { useNavigate, useLocation, useSearchParams, Link } from 'react-router-do
 import { Mail, CheckCircle2, Send, Loader2, ArrowLeft } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { toast } from 'sonner';
+import { apiClient } from '@/lib/services/api-client';
 
 export function VerifyEmailPage() {
   const navigate = useNavigate();
@@ -17,14 +18,34 @@ export function VerifyEmailPage() {
   const [resendCooldown, setResendCooldown] = useState(0);
 
   useEffect(() => {
-    if (token) {
-      // Simulate verification
-      setTimeout(() => {
+    let isActive = true;
+
+    const verify = async () => {
+      if (!token) {
         setIsVerifying(false);
-        setIsVerified(true);
-        toast.success('Email verified successfully!');
-      }, 2000);
-    }
+        return;
+      }
+
+      setIsVerifying(true);
+      const { error } = await apiClient.auth.verifyEmail(token);
+      if (!isActive) return;
+
+      if (error) {
+        setIsVerifying(false);
+        toast.error(typeof error === 'string' ? error : 'Verification link is invalid or has expired.');
+        return;
+      }
+
+      setIsVerifying(false);
+      setIsVerified(true);
+      toast.success('Email verified successfully!');
+    };
+
+    verify();
+
+    return () => {
+      isActive = false;
+    };
   }, [token]);
 
   useEffect(() => {
@@ -38,7 +59,7 @@ export function VerifyEmailPage() {
 
   const handleResend = () => {
     setResendCooldown(60);
-    toast.success('Verification email sent!');
+    toast.info('Verification email resend is not available yet. Please check your inbox again in a moment.');
   };
 
   const handleContinue = () => {

@@ -1,10 +1,10 @@
 param location string = 'southeastasia'
 param environment string = 'prod'
 param projectName string = 'eventix'
-param apiContainerImage string = 'ghcr.io/your-org/eventix-api:latest'
-param finalizerContainerImage string = 'ghcr.io/your-org/eventix-finalizer:latest'
-param holdCleanerContainerImage string = 'ghcr.io/your-org/eventix-hold-cleaner:latest'
-param holdCleanerCronSchedule string = '0 */5 * * * *'
+param apiContainerImage string = 'ghcr.io/eventix/eventix-api:latest'
+param finalizerContainerImage string = 'ghcr.io/eventix/eventix-finalizer:latest'
+param holdCleanerContainerImage string = 'ghcr.io/eventix/eventix-hold-cleaner:latest'
+param holdCleanerCronSchedule string = '*/5 * * * *'
 param redisKeyPrefix string = 'eventix:'
 param holdTtlSeconds int = 600
 param holdExpirationScanLimit int = 100
@@ -15,6 +15,7 @@ param rateLimitWindow string = 'PT1M'
 param postgresAdminUser string = 'eventix_admin'
 @secure()
 param postgresAdminPassword string
+param deployerObjectId string = ''
 
 // Generate unique suffix for global resources
 var uniqueSuffix = substring(uniqueString(resourceGroup().id), 0, 6)
@@ -35,6 +36,19 @@ var containerRegistryLoginServer = '${containerRegistryName}.azurecr.io'
 var apiContainerAppName = '${projectName}-api-ca-${environment}'
 var finalizerContainerAppName = '${projectName}-finalizer-${environment}'
 var holdCleanerJobName = '${projectName}-hold-cleaner-${environment}'
+var keyVaultInitialPolicies = deployerObjectId == '' ? [] : [
+  {
+    tenantId: subscription().tenantId
+    objectId: deployerObjectId
+    permissions: {
+      secrets: [
+        'get'
+        'list'
+        'set'
+      ]
+    }
+  }
+]
 
 // ==================== Storage Account ====================
 resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
@@ -117,7 +131,7 @@ resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
       family: 'A'
       name: 'standard'
     }
-    accessPolicies: []
+    accessPolicies: keyVaultInitialPolicies
     softDeleteRetentionInDays: 90
     enablePurgeProtection: true
   }
@@ -510,7 +524,7 @@ resource finalizerContainerApp 'Microsoft.App/containerApps@2023-05-01' = {
                 messageCount: '5'
                 namespace: serviceBusNamespace.name
               }
-              authentication: [
+              auth: [
                 {
                   secretRef: 'service-bus-connection'
                   triggerParameter: 'connection'
@@ -534,6 +548,9 @@ resource holdCleanerJob 'Microsoft.App/jobs@2023-05-01' = {
   properties: {
     environmentId: containerAppsEnv.id
     configuration: {
+      triggerType: 'Schedule'
+      replicaTimeout: 1800
+      replicaRetryLimit: 1
       registries: [
         {
           server: containerRegistryLoginServer
@@ -555,6 +572,10 @@ resource holdCleanerJob 'Microsoft.App/jobs@2023-05-01' = {
           value: appInsights.properties.ConnectionString
         }
       ]
+      scheduleTriggerConfig: {
+        cronExpression: holdCleanerCronSchedule
+        parallelism: 1
+      }
     }
     template: {
       containers: [
@@ -601,14 +622,6 @@ resource holdCleanerJob 'Microsoft.App/jobs@2023-05-01' = {
           ]
         }
       ]
-      scale: {
-        maxExecutions: 1
-      }
-    }
-    schedule: {
-      triggerType: 'Schedule'
-      cronExpression: holdCleanerCronSchedule
-      parallelism: 1
     }
   }
 }
@@ -739,6 +752,18 @@ resource functionApp 'Microsoft.Web/sites@2023-01-01' = {
           name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
           value: 'InstrumentationKey=${appInsights.properties.InstrumentationKey}'
         }
+        {
+          name: 'DATABASE_URL'
+          value: format('@Microsoft.KeyVault(VaultName={0};SecretName=POSTGRES_CONNECTION_STRING)', keyVault.name)
+        }
+        {
+          name: 'SERVICE_BUS_CONNECTION_STRING'
+          value: format('@Microsoft.KeyVault(VaultName={0};SecretName=SERVICE_BUS_CONNECTION_STRING)', keyVault.name)
+        }
+        {
+          name: 'SERVICE_BUS_FINALIZATION_QUEUE'
+          value: orderQueue.name
+        }
       ]
     }
   }
@@ -749,7 +774,7 @@ resource functionAppDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-0
   name: '${functionAppName}-diagnostics'
   scope: functionApp
   properties: {
-    workspaceId: appInsights.id
+    workspaceId: logAnalytics.id
     logs: [
       {
         category: 'FunctionAppLogs'

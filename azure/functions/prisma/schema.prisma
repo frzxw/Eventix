@@ -173,7 +173,7 @@ model Ticket {
   scannedBy         String?     @map("scanned_by") // Security personnel identifier
   
   // Transfer
-  transferredToEmail String?    @map("transferred_to_email")
+  transferredToEmail String? @map("transferred_to_email")
   transferredAt     DateTime?   @map("transferred_at")
   originalOrderId   String?     @map("original_order_id") // Original order before transfer
   

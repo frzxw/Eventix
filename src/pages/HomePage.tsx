@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { Hero } from '../components/home/Hero';
 import { PromoCarousel } from '../components/home/PromoCarousel';
@@ -8,60 +7,34 @@ import { EventCard } from '../components/events/EventCard';
 import { SEOHead } from '../components/SEOHead';
 import { EventGridSkeleton } from '../components/loading';
 import { mockEvents, getFeaturedEvents } from '../lib/mock-data';
-import { apiClient } from '../lib/services/api-client';
 import type { Event } from '../lib/types';
 import { useNavigate } from 'react-router-dom';
+import { useFeaturedEventsQuery, useEventsQuery } from '@/lib/hooks/useEvents';
 
 export function HomePage() {
   const navigate = useNavigate();
-  const [featuredEvents, setFeaturedEvents] = useState<Event[]>([]);
-  const [allEvents, setAllEvents] = useState<Event[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const featuredQuery = useFeaturedEventsQuery();
+  const eventsQuery = useEventsQuery({ limit: 12, page: 1, sort: 'date' });
 
-  useEffect(() => {
-    let isMounted = true;
+  const featuredEvents: Event[] = featuredQuery.data && featuredQuery.data.length > 0
+    ? featuredQuery.data
+    : getFeaturedEvents();
 
-    const loadEvents = async () => {
-      setIsLoading(true);
-      setError(null);
+  const allEvents: Event[] = eventsQuery.isError
+    ? mockEvents
+    : eventsQuery.data?.events ?? [];
 
-      const [featuredResponse, allResponse] = await Promise.all([
-        apiClient.events.getFeatured(),
-        apiClient.events.getAll({ limit: 12, sort: 'date' }),
-      ]);
+  const isLoading = featuredQuery.isPending || eventsQuery.isPending;
 
-      if (!isMounted) {
-        return;
-      }
-
-      if (featuredResponse.data && featuredResponse.data.length > 0) {
-        setFeaturedEvents(featuredResponse.data);
-      } else {
-        setFeaturedEvents(getFeaturedEvents());
-        if (featuredResponse.error) {
-          setError((prev) => prev ?? featuredResponse.error ?? null);
-        }
-      }
-
-      if (allResponse.data) {
-        setAllEvents(allResponse.data.events);
-      } else {
-        setAllEvents(mockEvents);
-        if (allResponse.error) {
-          setError((prev) => prev ?? allResponse.error ?? null);
-        }
-      }
-
-      setIsLoading(false);
-    };
-
-    loadEvents();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+  const error = eventsQuery.isError
+    ? eventsQuery.error instanceof Error
+      ? eventsQuery.error.message
+      : 'Unable to fetch events.'
+    : featuredQuery.isError
+    ? featuredQuery.error instanceof Error
+      ? featuredQuery.error.message
+      : 'Unable to fetch featured events.'
+    : null;
 
   const handleEventClick = (eventId: string) => {
     navigate(`/event/${eventId}`);

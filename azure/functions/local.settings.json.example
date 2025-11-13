@@ -10,6 +10,11 @@
     "BCRYPT_ROUNDS": "12",
     "DATABASE_URL": "postgresql://eventix:eventix@localhost:5432/eventix?schema=public",
     "SERVICE_BUS_CONNECTION_STRING": "Endpoint=sb://eventix-sb-namespace.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=<key>",
-    "SERVICE_BUS_FINALIZATION_QUEUE": "order-queue"
+    "SERVICE_BUS_FINALIZATION_QUEUE": "order-queue",
+    "REDIS_HOST": "localhost",
+    "REDIS_PORT": "6379",
+    "REDIS_PASSWORD": "",
+    "REDIS_TLS_ENABLED": "false",
+    "REDIS_KEY_PREFIX": "eventix:"
   }
 }

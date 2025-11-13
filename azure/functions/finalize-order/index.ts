@@ -4,12 +4,15 @@ import { randomUUID } from 'crypto';
 import prisma from '../prisma';
 import { generateTicketQRCode } from '../utils/qrcode';
 import { uploadBufferToBlob } from '../utils/storage';
+import { finalizeHold } from '../utils/holdService';
 
 type FinalizeOrderMessage = {
   orderId: string;
   userId?: string | null;
   paymentReference?: string | null;
   requestedAt?: string;
+  holdToken?: string | null;
+  eventId?: string | null;
 };
 
 type TicketPayload = {
@@ -149,6 +152,20 @@ export async function run(message: unknown, context: InvocationContext): Promise
       });
     }
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+
+  const holdToken = order.holdToken || payload.holdToken || null;
+  if (holdToken) {
+    try {
+      await finalizeHold(holdToken, {
+        orderId: order.id,
+        paymentReference: payload.paymentReference ?? undefined,
+      });
+    } catch (error) {
+      context.log(`FinalizeOrder: failed to finalize hold ${holdToken}: ${error}`);
+    }
+  } else {
+    context.log(`FinalizeOrder: order ${order.id} has no hold token to finalize`);
+  }
 
   context.log(`FinalizeOrder: completed order ${payload.orderId}`);
 }

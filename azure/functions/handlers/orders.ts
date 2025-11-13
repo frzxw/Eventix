@@ -1,9 +1,18 @@
 import { HttpRequest, HttpResponseInit } from '@azure/functions';
+import { Prisma } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import prisma from '../prisma';
 import { extractTokenFromHeader, verifyAccessToken } from '../utils/auth';
-import { generateTicketQRCode } from '../utils/qrcode';
-import { uploadBufferToBlob } from '../utils/storage';
+import {
+  HOLD_TTL_SECONDS,
+  acquireHold,
+  claimHold,
+  markHoldCommitted,
+  releaseHold,
+  type HoldAcquisitionResult,
+  type HoldClaimResult,
+} from '../utils/holdService';
+import { sendToFinalizationQueue } from '../utils/serviceBus';
 
 function ok(body: any): HttpResponseInit { return { status: 200, jsonBody: body }; }
 function created(body: any): HttpResponseInit { return { status: 201, jsonBody: body }; }
@@ -11,6 +20,17 @@ function badRequest(message: string): HttpResponseInit { return { status: 400, j
 function unauthorized(message: string): HttpResponseInit { return { status: 401, jsonBody: { success: false, error: 'UNAUTHORIZED', message } }; }
 function notFound(message: string): HttpResponseInit { return { status: 404, jsonBody: { success: false, error: 'NOT_FOUND', message } }; }
 function fail(message: string): HttpResponseInit { return { status: 500, jsonBody: { success: false, error: 'SERVER_ERROR', message } }; }
+function conflict(message: string, extra?: Record<string, unknown>): HttpResponseInit {
+  return {
+    status: 409,
+    jsonBody: {
+      success: false,
+      error: 'CONFLICT',
+      message,
+      ...(extra ?? {}),
+    },
+  };
+}
 
 type CreateOrderBody = {
   eventId: string;
@@ -20,6 +40,37 @@ type CreateOrderBody = {
 
 function roundCurrency(value: number): number {
   return Math.round(value * 100) / 100;
+}
+
+function isSerializationConflict(error: unknown): boolean {
+  if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    return error.code === 'P2034';
+  }
+  if (error instanceof Error) {
+    return /serialization failure/i.test(error.message) || /deadlock detected/i.test(error.message);
+  }
+  return false;
+}
+
+async function withSerializationRetry<T>(handler: () => Promise<T>, maxAttempts = 3): Promise<T> {
+  let attempt = 0;
+  let lastError: unknown;
+  while (attempt < maxAttempts) {
+    try {
+      return await handler();
+    } catch (error) {
+      lastError = error;
+      if (!isSerializationConflict(error) || attempt === maxAttempts - 1) {
+        throw error;
+      }
+
+      const backoffMs = 50 * Math.pow(2, attempt);
+      await new Promise((resolve) => setTimeout(resolve, backoffMs));
+      attempt += 1;
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error('Transaction failed after retries');
 }
 
 /**
@@ -51,6 +102,26 @@ export async function createOrderHandler(req: HttpRequest): Promise<HttpResponse
       }
     }
 
+    const holdResult = await acquireHold({
+      eventId: body.eventId,
+      requesterId: userPayload.sub,
+      traceId: req.headers.get('x-trace-id') ?? undefined,
+      entries: body.tickets.map((ticket) => ({
+        eventId: body.eventId,
+        categoryId: ticket.categoryId,
+        quantity: ticket.quantity,
+      })),
+    });
+
+    if (!holdResult.success || !holdResult.holdToken) {
+      return respondHoldFailure(holdResult);
+    }
+
+    const holdToken = holdResult.holdToken;
+    const holdExpiresAt = holdResult.expiresAt
+      ? new Date(holdResult.expiresAt)
+      : new Date(Date.now() + HOLD_TTL_SECONDS * 1000);
+
     // Compute subtotal and basic fees
     let subtotal = 0;
     for (const item of body.tickets) {
@@ -61,8 +132,8 @@ export async function createOrderHandler(req: HttpRequest): Promise<HttpResponse
     const tax = roundCurrency((subtotal + serviceFee) * 0.1);
     const totalAmount = roundCurrency(subtotal + serviceFee + tax);
 
-    const orderNumber = `EVX-${new Date().getFullYear()}-${Math.random().toString(36).slice(2, 7).toUpperCase()}`;
-    const holdToken = randomUUID();
+    const now = new Date();
+    const orderNumber = `EVX-${now.getFullYear()}-${Math.random().toString(36).slice(2, 7).toUpperCase()}`;
 
     const orderItemsData = body.tickets.map(({ categoryId, quantity }) => {
       const cat = categories.find((c) => c.id === categoryId)!;
@@ -73,45 +144,103 @@ export async function createOrderHandler(req: HttpRequest): Promise<HttpResponse
       };
     });
 
-    const order = await prisma.order.create({
-      data: {
-        orderNumber,
-        holdToken,
-        userId: userPayload.sub,
-        eventId: body.eventId,
-        status: 'pending',
-        attendeeFirstName: body.attendeeInfo.firstName,
-        attendeeLastName: body.attendeeInfo.lastName,
-        attendeeEmail: body.attendeeInfo.email,
-        attendeePhone: body.attendeeInfo.phone,
-        subtotal,
-        serviceFee,
-        processingFee: 0,
-        tax,
-        totalAmount,
-        currency: 'IDR',
-        paymentStatus: 'pending',
-        orderItems: {
-          create: orderItemsData,
-        },
-      } as any,
-      select: {
-        id: true,
-        orderNumber: true,
-        totalAmount: true,
-        status: true,
-        paymentStatus: true,
-      },
-    });
+    let order;
+    try {
+      order = await withSerializationRetry(() =>
+        prisma.$transaction(async (tx) => {
+          const categoryRecords = await tx.ticketCategory.findMany({
+            where: { id: { in: categoryIds } },
+            select: { id: true, quantityTotal: true, quantitySold: true },
+          });
+
+          const pendingOrders = await tx.order.findMany({
+            where: {
+              status: { in: ['pending_payment', 'processing'] },
+              expiresAt: { gt: now },
+              orderItems: {
+                some: { categoryId: { in: categoryIds } },
+              },
+            },
+            select: {
+              orderItems: {
+                where: { categoryId: { in: categoryIds } },
+                select: { categoryId: true, quantity: true },
+              },
+            },
+          });
+
+          const pendingMap = new Map<string, number>();
+          for (const pendingOrder of pendingOrders) {
+            for (const item of pendingOrder.orderItems) {
+              pendingMap.set(item.categoryId, (pendingMap.get(item.categoryId) ?? 0) + item.quantity);
+            }
+          }
+
+          for (const item of orderItemsData) {
+            const category = categoryRecords.find((cat) => cat.id === item.categoryId);
+            if (!category) {
+              throw new Error('CATEGORY_NOT_FOUND');
+            }
+            const pending = pendingMap.get(item.categoryId) ?? 0;
+            const available = category.quantityTotal - category.quantitySold - pending;
+            if (available < item.quantity) {
+              throw new Error('INSUFFICIENT_CAPACITY');
+            }
+          }
+
+          return tx.order.create({
+            data: {
+              orderNumber,
+              holdToken,
+              userId: userPayload.sub,
+              eventId: body.eventId,
+              status: 'pending_payment',
+              attendeeFirstName: body.attendeeInfo.firstName,
+              attendeeLastName: body.attendeeInfo.lastName,
+              attendeeEmail: body.attendeeInfo.email,
+              attendeePhone: body.attendeeInfo.phone,
+              subtotal,
+              serviceFee,
+              processingFee: 0,
+              tax,
+              totalAmount,
+              currency: 'IDR',
+              paymentStatus: 'pending',
+              expiresAt: holdExpiresAt,
+              orderItems: {
+                create: orderItemsData,
+              },
+            } as any,
+            select: {
+              id: true,
+              orderNumber: true,
+              totalAmount: true,
+              status: true,
+              paymentStatus: true,
+              expiresAt: true,
+            },
+          });
+        }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable })
+      );
+    } catch (error) {
+      await releaseHold(holdToken, 'order_creation_failed', 'cancelled').catch(() => undefined);
+      throw error;
+    }
 
     return created({
       success: true,
       orderId: order.id,
       orderNumber: order.orderNumber,
       totalAmount: order.totalAmount,
+      status: order.status,
+      expiresAt: order.expiresAt,
+      holdToken,
       paymentUrl: null,
     });
   } catch (e: any) {
+    if (e?.message === 'INSUFFICIENT_CAPACITY') {
+      return badRequest('Selected ticket quantity is no longer available');
+    }
     return fail(`Failed to create order: ${e?.message || 'Unknown error'}`);
   }
 }
@@ -138,97 +267,80 @@ export async function confirmOrderHandler(req: HttpRequest): Promise<HttpRespons
     });
     if (!order) return notFound('Order not found');
 
-    if (order.status === 'confirmed' || order.paymentStatus === 'confirmed' || order.paymentStatus === 'completed') {
+    if (order.status === 'confirmed' || order.paymentStatus === 'completed') {
       const mapped = mapOrder(order);
       return ok({ success: true, order: mapped, tickets: mapped.tickets });
     }
 
-    // For now, create a single ticket; later, iterate stored order items
-    const ticketNumberBase = `TKT-${order.orderNumber}`;
-    const ticketPayloads: Array<{
-      id: string;
-      ticketNumber: string;
-      orderId: string;
-      eventId: string;
-      categoryId: string;
-      qrCodeData: string;
-      qrCodeUrl: string | null;
-      barcodeData: string;
-      status: string;
-    }> = [];
-
-    for (const item of order.orderItems) {
-      if (!item.categoryId || !item.category) continue;
-
-      for (let i = 0; i < item.quantity; i++) {
-        const ticketId = randomUUID();
-        const ticketNumber = `${ticketNumberBase}-${item.category.name}-${Math.random().toString(36).slice(2, 7).toUpperCase()}`;
-        const { qrCodeData, qrCodeBuffer } = await generateTicketQRCode(ticketNumber, order.eventId, order.id);
-
-        let qrUrl: string | null = null;
-        try {
-          const blobName = `${ticketNumber}.png`;
-          const container = process.env.QR_CODES_CONTAINER || 'qr-codes';
-          const url = await uploadBufferToBlob(qrCodeBuffer, container, blobName);
-          if (url) qrUrl = url;
-        } catch {
-          qrUrl = null;
-        }
-
-        ticketPayloads.push({
-          id: ticketId,
-          ticketNumber,
-          orderId: order.id,
-          eventId: order.eventId,
-          categoryId: item.categoryId,
-          qrCodeData,
-          qrCodeUrl: qrUrl,
-          barcodeData: ticketNumber,
-          status: 'valid',
-        });
-      }
+    if (order.expiresAt && order.expiresAt < new Date()) {
+      return badRequest('Order hold has expired. Please start a new checkout session.');
     }
 
-    await prisma.$transaction([
-      prisma.order.update({
-        where: { id: order.id },
-        data: { status: 'confirmed', paymentStatus: 'completed', paidAt: new Date() } as any,
-      }),
-      ...order.orderItems.map((item) =>
-        prisma.ticketCategory.update({
-          where: { id: item.categoryId },
-          data: { quantitySold: { increment: item.quantity } },
-        })
-      ),
-      ...ticketPayloads.map((ticket) =>
-        prisma.ticket.create({
-          data: {
-            id: ticket.id,
-            ticketNumber: ticket.ticketNumber,
-            orderId: ticket.orderId,
-            eventId: ticket.eventId,
-            categoryId: ticket.categoryId,
-            qrCodeData: ticket.qrCodeData,
-            qrCodeUrl: ticket.qrCodeUrl ?? undefined,
-            barcodeData: ticket.barcodeData,
-            status: ticket.status,
-          } as any,
-        })
-      ),
-    ]);
+    if (!order.orderItems.length) {
+      return fail('Order has no items to finalize');
+    }
 
-    const updated = await prisma.order.findUnique({
-      where: { id: order.id },
-      include: {
-        event: true,
-        orderItems: { include: { category: true } },
-        tickets: true,
-      },
+    if (order.paymentStatus === 'processing') {
+      return { status: 202, headers: { 'content-type': 'application/json' }, jsonBody: { success: true, orderId: order.id, status: order.status } };
+    }
+
+    if (!order.holdToken) {
+      return fail('Order is missing hold reservation data');
+    }
+
+    const holdClaim = await claimHold(order.holdToken, {
+      orderReference: order.id,
+      extendTtlSeconds: HOLD_TTL_SECONDS,
     });
 
-    const mapped = updated ? mapOrder(updated) : mapOrder(order);
+    if (!holdClaim.success) {
+      return respondHoldClaimFailure(holdClaim);
+    }
 
-    return ok({ success: true, order: mapped, tickets: mapped.tickets });
+    const requestBody = (await req.json().catch(() => null)) as { paymentReference?: string } | null;
+    const paymentReference = requestBody?.paymentReference ?? order.paymentReference ?? null;
+    let orderUpdated = false;
+
+    try {
+      await prisma.order.update({
+        where: { id: order.id },
+        data: {
+          status: 'processing',
+          paymentStatus: 'processing',
+          paymentReference,
+          paidAt: new Date(),
+          expiresAt: null,
+        },
+      });
+      orderUpdated = true;
+
+      await markHoldCommitted(order.holdToken, order.id);
+
+      await sendToFinalizationQueue({
+        orderId: order.id,
+        userId: order.userId,
+        holdToken: order.holdToken,
+        eventId: order.eventId,
+        paymentReference,
+        requestedAt: new Date().toISOString(),
+      });
+    } catch (error) {
+      if (orderUpdated) {
+        await prisma.order.update({
+          where: { id: order.id },
+          data: {
+            status: 'pending_payment',
+            paymentStatus: 'pending',
+            paymentReference,
+          },
+        }).catch(() => undefined);
+      }
+
+      await releaseHold(order.holdToken, 'checkout_failed', 'cancelled').catch(() => undefined);
+      throw error;
+    }
+
+    return { status: 202, headers: { 'content-type': 'application/json' }, jsonBody: { success: true, orderId: order.id, status: 'processing' } };
   } catch (e: any) {
     return fail(`Failed to confirm order: ${e?.message || 'Unknown error'}`);
   }
@@ -292,6 +404,48 @@ export async function getOrderHandler(req: HttpRequest): Promise<HttpResponseIni
   } catch (e: any) {
     return fail(`Failed to fetch order: ${e?.message || 'Unknown error'}`);
   }
+}
+
+function respondHoldClaimFailure(result: HoldClaimResult): HttpResponseInit {
+  if (result.error === 'HOLD_EXPIRED') {
+    return {
+      status: 410,
+      jsonBody: {
+        success: false,
+        error: 'HOLD_EXPIRED',
+        message: 'Ticket hold has expired. Please start a new checkout session.',
+      },
+    };
+  }
+
+  if (result.error === 'HOLD_NOT_FOUND') {
+    return conflict('Ticket hold could not be located', {
+      error: 'HOLD_NOT_FOUND',
+    });
+  }
+
+  return conflict('Unable to claim ticket hold', {
+    error: result.error ?? 'HOLD_CLAIM_FAILED',
+    status: result.status,
+  });
+}
+
+function respondHoldFailure(result: HoldAcquisitionResult): HttpResponseInit {
+  if (result.error === 'INSUFFICIENT_STOCK') {
+    return conflict('Requested quantity exceeds available stock', {
+      error: 'INSUFFICIENT_STOCK',
+      categoryId: result.categoryId,
+      available: result.available,
+    });
+  }
+
+  if (result.error === 'INVALID_QUANTITY') {
+    return badRequest('Quantity must be greater than zero');
+  }
+
+  return conflict('Unable to reserve selected tickets', {
+    error: result.error ?? 'HOLD_FAILED',
+  });
 }
 
 function mapOrder(order: any) {

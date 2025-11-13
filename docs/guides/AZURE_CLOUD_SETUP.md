@@ -358,19 +358,22 @@ Automated deployment on push to `main`:
 ### Manual Deployment
 
 ```bash
-# Build
+# Build frontend assets locally (optional if CI handles it)
 npm run build
 
-# Deploy frontend
-az staticwebapp create \
-  --name eventix-app \
-  --resource-group eventix-rg \
-  --source https://github.com/your-org/eventix
+# Provision or update Azure resources (including Static Web App when enabled)
+azure\scripts\10-az-provision-core.cmd
 
-# Deploy backend
-cd azure/functions
+# Publish Azure Functions (backend)
+cd azure\functions
 func azure functionapp publish eventix-api --build remote
 ```
+
+> 💡 Set `AZ_DEPLOY_STATIC_WEB_APP=true` and the related location/SKU variables in
+> `azure\scripts\00-az-variables.local.cmd` before running the provisioning
+> script. The Bicep template now creates the Static Web App alongside the rest of
+> the infrastructure, so you no longer need to call `az staticwebapp create`
+> manually unless you prefer managing it outside the template.
 
 ## 📱 Environment Tiers
 

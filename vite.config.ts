@@ -1,4 +1,4 @@
-/// <reference types="vitest" />
+import 'vitest';
 
 import { defineConfig, type UserConfig } from 'vite';
 import react from '@vitejs/plugin-react-swc';

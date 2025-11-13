@@ -9,6 +9,8 @@ on:
 env:
   AZURE_REGION: southeastasia
   NODE_VERSION: '18.x'
+  STATIC_WEB_APP_LOCATION: eastasia
+  DEPLOY_STATIC_WEB_APP: 'true'
 
 jobs:
   build:
@@ -66,7 +68,12 @@ jobs:
           subscriptionId: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           resourceGroupName: ${{ secrets.AZURE_RESOURCE_GROUP }}
           template: ./azure/infrastructure/main.bicep
-          parameters: location=${{ env.AZURE_REGION }} environment=prod projectName=eventix
+          parameters: >-
+            location=${{ env.AZURE_REGION }}
+            environment=prod
+            projectName=eventix
+            deployStaticWebApp=${{ env.DEPLOY_STATIC_WEB_APP }}
+            staticWebAppLocation=${{ env.STATIC_WEB_APP_LOCATION }}
           failOnStdErr: false
 
   # Frontend SWA deploy handled by azure-static-web-apps.yml

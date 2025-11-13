@@ -63,15 +63,15 @@ npm install
 npm run build
 ```
 
-Then deploy to Azure Static Web Apps:
+Then provision Azure resources (including Static Web App when enabled) and publish:
 
 ```bash
-az staticwebapp create \
-  --name eventix-app \
-  --resource-group eventix-rg \
-  --location eastasia \
-  --app-location "dist" \
-  --output-location "dist"
+# Provision via Bicep (set AZ_DEPLOY_STATIC_WEB_APP=true in azure/scripts/00-az-variables.local.cmd)
+azure\scripts\10-az-provision-core.cmd
+
+# Deploy Azure Functions backend
+cd azure\functions
+func azure functionapp publish eventix-api --build remote
 ```
 
 ### Step 5: Test the Deployment (1 min)

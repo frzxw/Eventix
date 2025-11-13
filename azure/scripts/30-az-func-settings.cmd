@@ -21,7 +21,9 @@ az functionapp config appsettings set --name %AZ_FUNCTIONAPP% --resource-group %
   APPLICATIONINSIGHTS_CONNECTION_STRING="@Microsoft.KeyVault(SecretUri=https://%AZ_KEYVAULT%.vault.azure.net/secrets/appinsights-connection-string/)" || exit /b 1
 
 echo Enabling CORS placeholder (run 40-az-cors after SWA deploy for real URL) ...
-az functionapp cors add --resource-group %AZ_RG% --name %AZ_FUNCTIONAPP% --allowed-origins https://%AZ_SWA%.azurestaticapps.net || rem continue if not provisioned yet
+set CORS_PLACEHOLDER=https://*.azurestaticapps.net
+if not "%AZ_STATIC_WEB_APP%"=="" set CORS_PLACEHOLDER=https://%AZ_STATIC_WEB_APP%.azurestaticapps.net
+az functionapp cors add --resource-group %AZ_RG% --name %AZ_FUNCTIONAPP% --allowed-origins %CORS_PLACEHOLDER% || rem continue if not provisioned yet
 
 echo Function App settings configured.
 endlocal

@@ -327,35 +327,40 @@ See section "CI/CD Pipeline with GitHub Actions" below.
 
 #### 4.1 Create Static Web App
 
-```bash
-az staticwebapp create \
-  --name eventix-app \
-  --resource-group eventix-rg \
-  --location eastasia \
-  --branch main \
-  --repo-url https://github.com/your-org/eventix \
-  --app-location "/" \
-  --output-location "dist" \
-  --token "<GITHUB_TOKEN>"
-```
+> ✅ The infrastructure Bicep template now provisions the Static Web App when
+> `deployStaticWebApp=true`. Update `azure/scripts/00-az-variables.local.cmd`
+> with:
+>
+> ```bat
+> set AZ_DEPLOY_STATIC_WEB_APP=true
+> set AZ_STATIC_WEB_APP_LOCATION=eastasia
+> set AZ_STATIC_WEB_APP=eventix-app-prod
+> ```
+>
+> Then run `azure\scripts\10-az-provision-core.cmd` (or trigger the
+> `azure-deploy.yml` GitHub Actions workflow) to create the resource. Use the
+> manual `az staticwebapp create` command only if you need full portal control.
 
 #### 4.2 Configure Static Web App
 
-```bash
-# Get deployment token
-DEPLOYMENT_TOKEN=$(az staticwebapp secrets list \
-  --name eventix-app \
-  --resource-group eventix-rg \
-  --query properties.apiKey -o tsv)
+1. Ensure `staticwebapp.config.json` is deployed at the root of the repository
+   (already included) so client-side routing and `/api/*` passthroughs work.
+2. Add secrets to GitHub for the CI workflow:
 
-# Configure environment variables
-az staticwebapp appsettings set \
-  --name eventix-app \
-  --resource-group eventix-rg \
-  --setting-names \
-    VITE_API_BASE_URL="https://eventix-api.azurewebsites.net/api" \
-    VITE_ENVIRONMENT="production"
-```
+   - `AZURE_STATIC_WEB_APPS_API_TOKEN`
+   - `VITE_API_URL`
+   - `VITE_APPINSIGHTS_CONNECTION_STRING`
+
+3. (Optional) Update app settings via CLI:
+
+   ```bash
+   az staticwebapp appsettings set \
+     --name eventix-app \
+     --resource-group eventix-rg \
+     --setting-names \
+       VITE_API_URL="https://eventix-api.azurewebsites.net/api" \
+       VITE_ENVIRONMENT="production"
+   ```
 
 ---
 

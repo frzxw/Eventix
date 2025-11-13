@@ -22,6 +22,12 @@ set AZ_REDIS=eventix-cache-%AZ_ENVIRONMENT%
 set AZ_SERVICEBUS=eventix-sb-%AZ_ENVIRONMENT%
 set AZ_POSTGRES_SERVER=eventix-pg-%AZ_ENVIRONMENT%
 set AZ_POSTGRES_DB=eventix-db
+set AZ_FUNCTIONAPP=eventix-api-%AZ_ENVIRONMENT%
+set AZ_STATIC_WEB_APP=eventix-app-%AZ_ENVIRONMENT%
+set AZ_DEPLOY_STATIC_WEB_APP=true
+set AZ_STATIC_WEB_APP_LOCATION=eastasia
+set AZ_STATIC_WEB_APP_SKU_NAME=Standard
+set AZ_STATIC_WEB_APP_SKU_TIER=Standard
 
 REM Container image tags (override after pushing to ACR)
 set AZ_API_IMAGE=eventixacr6ncpj7.azurecr.io/eventix-api:latest

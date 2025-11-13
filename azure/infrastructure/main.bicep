@@ -11,6 +11,10 @@ param holdExpirationScanLimit int = 100
 param idempotencyTtlSeconds int = 900
 param rateLimitMax int = 300
 param rateLimitWindow string = 'PT1M'
+param deployStaticWebApp bool = true
+param staticWebAppSkuTier string = 'Standard'
+param staticWebAppSkuName string = 'Standard'
+param staticWebAppLocation string = 'eastasia'
 param webPubSubSku string = 'Standard_S1'
 @secure()
 param postgresAdminUser string = 'eventix_admin'
@@ -23,6 +27,7 @@ var uniqueSuffix = substring(uniqueString(resourceGroup().id), 0, 6)
 
 // Resource naming
 var storageAccountName = '${projectName}storage${uniqueSuffix}'
+var staticWebAppName = '${projectName}-app-${environment}'
 var postgresServerName = '${projectName}-pg-${environment}'
 var postgresDatabaseName = '${projectName}-db'
 var functionAppName = '${projectName}-api-${environment}'
@@ -64,6 +69,20 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
     accessTier: 'Hot'
     minimumTlsVersion: 'TLS1_2'
     supportsHttpsTrafficOnly: true
+  }
+}
+
+// ==================== Azure Static Web App ====================
+resource staticWebApp 'Microsoft.Web/staticSites@2022-09-01' = if (deployStaticWebApp) {
+  name: staticWebAppName
+  location: staticWebAppLocation
+  sku: {
+    name: staticWebAppSkuName
+    tier: staticWebAppSkuTier
+  }
+  properties: {
+    enterpriseGradeCdnStatus: 'Disabled'
+    stagingEnvironmentPolicy: 'Enabled'
   }
 }
 
@@ -830,10 +849,12 @@ resource functionAppCors 'Microsoft.Web/sites/config@2023-01-01' = {
   name: 'web'
   properties: {
     cors: {
-      allowedOrigins: [
-        'https://${projectName}-app.azurestaticapps.net'
-        'http://localhost:3000'
-      ]
+      allowedOrigins: concat(
+        deployStaticWebApp ? ['https://*.azurestaticapps.net'] : [],
+        [
+          'http://localhost:3000'
+        ]
+      )
       supportCredentials: true
     }
   }
@@ -861,3 +882,4 @@ output apiContainerAppName string = apiContainerApp.name
 output finalizerContainerAppName string = finalizerContainerApp.name
 output holdCleanerJobNameOutput string = holdCleanerJob.name
 output webPubSubResourceName string = webPubSub.name
+output staticWebAppNameOutput string = deployStaticWebApp ? staticWebApp.name : ''

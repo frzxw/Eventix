@@ -39,7 +39,11 @@ az deployment group create ^
     apiContainerImage=%AZ_API_IMAGE% ^
     finalizerContainerImage=%AZ_FINALIZER_IMAGE% ^
     holdCleanerContainerImage=%AZ_HOLD_CLEANER_IMAGE% ^
-  deployerObjectId=%AZ_DEPLOYER_OBJECT_ID% ^
+    deployStaticWebApp=%AZ_DEPLOY_STATIC_WEB_APP% ^
+    staticWebAppLocation=%AZ_STATIC_WEB_APP_LOCATION% ^
+    staticWebAppSkuName=%AZ_STATIC_WEB_APP_SKU_NAME% ^
+    staticWebAppSkuTier=%AZ_STATIC_WEB_APP_SKU_TIER% ^
+    deployerObjectId=%AZ_DEPLOYER_OBJECT_ID% ^
     postgresAdminUser=%AZ_PG_ADMIN_USER% ^
     postgresAdminPassword=%AZ_PG_ADMIN_PASSWORD% || exit /b 1
 

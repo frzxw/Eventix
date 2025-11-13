@@ -3,7 +3,7 @@
  */
 
 import bcryptjs from 'bcryptjs';
-import jwt, { SignOptions, Secret } from 'jsonwebtoken';
+import jwt, { Secret } from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-key-change-in-production';

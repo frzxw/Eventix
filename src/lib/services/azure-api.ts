@@ -10,7 +10,7 @@ import axios, {
   InternalAxiosRequestConfig,
   AxiosResponse,
 } from 'axios';
-import { API, ENVIRONMENT } from '../constants';
+import { API } from '../constants';
 import { logger } from './logger';
 import {
   AuthStoredUser,
@@ -248,7 +248,7 @@ class AzureApiClient {
     try {
       await this.client.post('/auth/logout');
     } catch (error) {
-      logger.warn('Logout API failed, clearing local tokens');
+      logger.warn('Logout API failed, clearing local tokens', { error });
     }
     
     this.clearAuthTokens();

@@ -159,9 +159,10 @@ export async function forgotPasswordHandler(req: HttpRequest): Promise<HttpRespo
     if (!email) return { status: 400, jsonBody: { success: false, error: 'VALIDATION_ERROR', message: 'Email is required' } };
     const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
     if (user) {
-      const resetToken = generateVerificationToken();
-      await prisma.auditLog.create({ data: { userId: user.id, action: 'PASSWORD_RESET_REQUESTED', resourceType: 'USER', resourceId: user.id, changes: JSON.stringify({ email: user.email }), ipAddress: req.headers.get('x-forwarded-for') || req.headers.get('client-ip') || null, userAgent: req.headers.get('user-agent') || null } });
-      // TODO: integrate SendGrid/Azure Communication Services to send reset email with resetToken
+  const resetToken = generateVerificationToken();
+  await prisma.auditLog.create({ data: { userId: user.id, action: 'PASSWORD_RESET_REQUESTED', resourceType: 'USER', resourceId: user.id, changes: JSON.stringify({ email: user.email }), ipAddress: req.headers.get('x-forwarded-for') || req.headers.get('client-ip') || null, userAgent: req.headers.get('user-agent') || null } });
+  void resetToken;
+  // TODO: integrate SendGrid/Azure Communication Services to send reset email with resetToken
     }
     return { status: 200, jsonBody: { success: true, message: 'If an account exists with this email, a password reset link will be sent' } };
   } catch (error) {

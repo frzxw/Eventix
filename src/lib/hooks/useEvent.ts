@@ -1,9 +1,10 @@
-import { useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useCallback, useMemo } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/services/api-client';
 import { queryKeys } from '@/lib/queryKeys';
 import type { Event } from '@/lib/types';
 import { mockEvents } from '@/lib/mock-data';
+import type { EventsListResponse } from './useEvents';
 
 type EventDetailResponse = {
   event: Event;
@@ -18,7 +19,32 @@ interface UseEventResult {
   refetch: () => Promise<void>;
 }
 
+const EVENT_DETAIL_STALE_TIME = 1000 * 60 * 5;
+const EVENT_DETAIL_GC_TIME = 1000 * 60 * 15;
+
 export function useEvent(eventId?: string): UseEventResult {
+  const queryClient = useQueryClient();
+
+  const getCachedSnapshot = useCallback((): EventDetailResponse | null => {
+    if (!eventId) {
+      return null;
+    }
+
+    const cachedLists = queryClient.getQueriesData<EventsListResponse>({ queryKey: queryKeys.events.root });
+    for (const [, data] of cachedLists) {
+      if (!data?.events?.length) {
+        continue;
+      }
+      const match = data.events.find((item) => item.id === eventId);
+      if (match) {
+        const related = data.events.filter((item) => item.id !== eventId).slice(0, 4);
+        return { event: match, relatedEvents: related };
+      }
+    }
+
+    return null;
+  }, [eventId, queryClient]);
+
   const detailQuery = useQuery<EventDetailResponse>({
     queryKey: queryKeys.events.detail(eventId),
     queryFn: async () => {
@@ -31,9 +57,14 @@ export function useEvent(eventId?: string): UseEventResult {
       }
       return response.data;
     },
-    enabled: Boolean(eventId),
+  enabled: !!eventId,
     retry: 1,
-    placeholderData: (previousData: EventDetailResponse | undefined) => previousData,
+    initialData: () => getCachedSnapshot() ?? undefined,
+    placeholderData: (previousData: EventDetailResponse | undefined) => previousData ?? getCachedSnapshot() ?? undefined,
+    staleTime: EVENT_DETAIL_STALE_TIME,
+    gcTime: EVENT_DETAIL_GC_TIME,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   const fallback = useMemo(() => {
@@ -60,7 +91,7 @@ export function useEvent(eventId?: string): UseEventResult {
   return {
     event,
     relatedEvents,
-    isLoading: Boolean(eventId) ? detailQuery.isPending : false,
+  isLoading: eventId ? detailQuery.isPending : false,
     error,
     refetch: async () => {
       await detailQuery.refetch();

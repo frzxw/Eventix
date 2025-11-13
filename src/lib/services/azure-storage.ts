@@ -3,7 +3,7 @@
  * Handles image uploads, QR code generation, and file management
  */
 
-import { BlobServiceClient, ContainerClient, BlobClient } from '@azure/storage-blob';
+import { BlobServiceClient, ContainerClient } from '@azure/storage-blob';
 import { AZURE_STORAGE } from '../constants';
 import { logger } from './logger';
 
@@ -220,7 +220,7 @@ class AzureStorageService {
       // Note: This requires proper Azure SDK setup with connection string
       // For production, use managed identity or SAS key stored in Key Vault
       const url = blockBlobClient.url;
-      logger.debug('SAS URL generated', { containerName, blobName });
+  logger.debug('SAS URL generated', { containerName, blobName, expiryHours });
       return url;
     } catch (error) {
       logger.error('Failed to generate SAS URL', {

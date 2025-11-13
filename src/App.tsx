@@ -22,6 +22,7 @@ import { FAQPage } from './pages/FAQPage';
 import { TermsPage } from './pages/TermsPage';
 import { PrivacyPage } from './pages/PrivacyPage';
 import { ContactPage } from './pages/ContactPage';
+import { QueuePage } from './pages/QueuePage';
 import { Toaster } from './components/ui/sonner';
 import { AuthProvider } from '@/context/AuthContext';
 import MockPaymentPage from './pages/MockPaymentPage';
@@ -42,7 +43,6 @@ const pageTransition = {
 
 function AnimatedRoutes() {
   const location = useLocation();
-  const isAuthPage = location.pathname.startsWith('/auth');
 
   return (
     <AnimatePresence mode="wait">
@@ -89,6 +89,17 @@ function AnimatedRoutes() {
             transition={pageTransition}
           >
             <CheckoutPage />
+          </motion.div>
+        } />
+        <Route path="/queue" element={
+          <motion.div
+            variants={pageVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            transition={pageTransition}
+          >
+            <QueuePage />
           </motion.div>
         } />
         <Route path="/my-tickets" element={

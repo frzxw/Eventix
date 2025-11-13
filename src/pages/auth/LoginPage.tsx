@@ -244,7 +244,7 @@ export function LoginPage() {
 
         {/* Sign Up Link */}
         <p className="mt-6 text-center text-sm text-[var(--text-secondary)]">
-          Don't have an account?{' '}
+          Don&rsquo;t have an account?{' '}
           <Link
             to="/auth/signup"
             className="text-[var(--primary-500)] hover:text-[var(--primary-400)] transition-smooth"

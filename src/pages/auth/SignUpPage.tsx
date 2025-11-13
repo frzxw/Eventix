@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'motion/react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, Eye, EyeOff, User, Phone, Sparkles, ArrowRight, Check, ArrowLeft } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, User, Sparkles, ArrowRight, Check, ArrowLeft } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';

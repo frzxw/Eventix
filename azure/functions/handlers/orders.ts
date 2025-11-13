@@ -1,6 +1,5 @@
 import { HttpRequest, HttpResponseInit } from '@azure/functions';
 import { Prisma } from '@prisma/client';
-import { randomUUID } from 'crypto';
 import prisma from '../prisma';
 import { extractTokenFromHeader, verifyAccessToken } from '../utils/auth';
 import {

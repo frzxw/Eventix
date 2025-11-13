@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { CheckCircle2, Download, Mail, Calendar, MapPin, Ticket, ArrowRight } from 'lucide-react';
 import { Button } from '../components/ui/button';
+import { LoadingSpinner } from '../components/LoadingSpinner';
 
 interface OrderDetails {
   orderId: string;
@@ -23,7 +24,6 @@ interface OrderDetails {
 
 export function OrderConfirmationPage() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
   const [orderDetails, setOrderDetails] = useState<OrderDetails | null>(null);
 
   useEffect(() => {
@@ -44,8 +44,8 @@ export function OrderConfirmationPage() {
   if (!orderDetails) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="glass rounded-3xl border border-[var(--border-glass)] p-8 text-center">
-          <p className="text-[var(--text-secondary)]">Loading order details...</p>
+        <div className="glass rounded-3xl border border-[var(--border-glass)] px-10 py-12 text-center">
+          <LoadingSpinner size="lg" message="Finalizing your confirmation" />
         </div>
       </div>
     );

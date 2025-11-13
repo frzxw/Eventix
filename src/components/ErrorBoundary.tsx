@@ -50,7 +50,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 {/* Message */}
                 <h1 className="mb-3">Oops! Something went wrong</h1>
                 <p className="text-[var(--text-secondary)] mb-6">
-                  We encountered an unexpected error. Don't worry, we're on it!
+                  We encountered an unexpected error. Don&rsquo;t worry, we&rsquo;re on it!
                 </p>
 
                 {/* Error Details (Development only) */}

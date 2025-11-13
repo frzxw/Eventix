@@ -81,7 +81,8 @@ export function useMyTickets(): UseMyTicketsResult {
           .filter((item): item is Ticket => Boolean(item));
 
         setTickets(mapped);
-      } catch (err) {
+      } catch (error) {
+        console.error('Failed to load tickets from API', error);
         if (cancelled) return;
         setError('Unable to load tickets right now. Showing sample tickets.');
         setTickets(createMockTickets());

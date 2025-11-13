@@ -228,7 +228,7 @@ export function PrivacyPage() {
             </section>
 
             <section>
-              <h2 className="mb-4">Children's Privacy</h2>
+              <h2 className="mb-4">Children&rsquo;s Privacy</h2>
               <p className="text-[var(--text-secondary)] leading-relaxed">
                 Our services are not directed to children under 13 years of age. We do not knowingly collect
                 personal information from children under 13. If you believe we have collected information from a
@@ -249,7 +249,7 @@ export function PrivacyPage() {
               <h2 className="mb-4">Changes to This Policy</h2>
               <p className="text-[var(--text-secondary)] leading-relaxed">
                 We may update this Privacy Policy from time to time. We will notify you of significant changes
-                by posting the new policy on this page and updating the "Last Updated" date. Your continued use
+                by posting the new policy on this page and updating the &ldquo;Last Updated&rdquo; date. Your continued use
                 of our services after changes are posted constitutes your acceptance of the updated policy.
               </p>
             </section>

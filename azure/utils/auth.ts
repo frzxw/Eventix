@@ -4,7 +4,7 @@
  */
 
 import bcryptjs from 'bcryptjs';
-import jwt, { Secret, SignOptions, VerifyOptions } from 'jsonwebtoken';
+import jwt, { Secret, SignOptions } from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-key-change-in-production';
@@ -126,7 +126,7 @@ export function verifyAccessToken(token: string): JWTPayload | null {
       return null;
     }
     return decoded;
-  } catch (error) {
+  } catch {
     return null;
   }
 }
@@ -141,7 +141,7 @@ export function verifyRefreshToken(token: string): { sub: string; type: string }
       return null;
     }
     return decoded;
-  } catch (error) {
+  } catch {
     return null;
   }
 }

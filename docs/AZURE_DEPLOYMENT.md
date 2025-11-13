@@ -258,6 +258,27 @@ az keyvault secret set \
   --vault-name eventix-keyvault \
   --name jwt-secret \
   --value "<GENERATE_STRONG_SECRET>"
+
+#### 2.6 Create Azure Web PubSub (Realtime Queue Updates)
+
+```bash
+az webpubsub create \
+  --name eventix-webpubsub \
+  --resource-group eventix-rg \
+  --location southeastasia \
+  --sku Standard_S1
+
+# Capture the primary connection string for Key Vault
+WEBPUBSUB_CONN=$(az webpubsub key show \
+  --name eventix-webpubsub \
+  --resource-group eventix-rg \
+  --query primaryConnectionString -o tsv)
+
+az keyvault secret set \
+  --vault-name eventix-keyvault \
+  --name webpubsub-connection-string \
+  --value "$WEBPUBSUB_CONN"
+```
 ```
 
 ---

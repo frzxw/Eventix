@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
 import { Minus, Plus, Check, AlertCircle, Clock } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';

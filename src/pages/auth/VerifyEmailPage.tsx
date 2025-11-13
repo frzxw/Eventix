@@ -218,7 +218,7 @@ export function VerifyEmailPage() {
             Verify Your Email
           </h1>
           <p className="text-[var(--text-secondary)]">
-            We've sent a verification link to
+            We&rsquo;ve sent a verification link to
           </p>
           <p className="text-[var(--text-primary)] mt-1" style={{ fontWeight: 'var(--font-weight-medium)' }}>
             {email}
@@ -230,7 +230,7 @@ export function VerifyEmailPage() {
             {/* Instructions */}
             <div className="p-4 rounded-2xl bg-[var(--surface-glass)] border border-[var(--border-default)]">
               <h3 className="text-sm mb-3" style={{ fontWeight: 'var(--font-weight-medium)' }}>
-                What's next?
+                What&rsquo;s next?
               </h3>
               <ol className="space-y-2 text-sm text-[var(--text-secondary)]">
                 <li className="flex gap-2">
@@ -243,7 +243,7 @@ export function VerifyEmailPage() {
                 </li>
                 <li className="flex gap-2">
                   <span className="text-[var(--primary-500)]">3.</span>
-                  <span>You'll be redirected back to complete setup</span>
+                  <span>You&rsquo;ll be redirected back to complete setup</span>
                 </li>
               </ol>
             </div>
@@ -251,7 +251,7 @@ export function VerifyEmailPage() {
             {/* Resend */}
             <div className="text-center">
               <p className="text-sm text-[var(--text-secondary)] mb-3">
-                Didn't receive the email?
+                Didn&rsquo;t receive the email?
               </p>
               <Button
                 variant="outline"

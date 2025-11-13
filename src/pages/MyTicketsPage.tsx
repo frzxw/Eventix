@@ -71,7 +71,7 @@ export function MyTicketsPage() {
             No Upcoming Events
           </h3>
           <p className="text-[var(--text-secondary)] mb-6 max-w-md mx-auto">
-            You don't have any upcoming events. Explore events and book your next experience!
+            You don&rsquo;t have any upcoming events. Explore events and book your next experience!
           </p>
           <Button
             onClick={() => navigate('/discover')}

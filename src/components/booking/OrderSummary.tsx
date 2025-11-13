@@ -1,7 +1,7 @@
 import { Ticket, Tag as TagIcon } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { Event } from '../../lib/types';
 import type { TicketSelection } from './CategorySelector';
 
@@ -20,8 +20,17 @@ export function OrderSummary({
   onPromoCodeApply,
   className = '',
 }: OrderSummaryProps) {
-  const [promoInput, setPromoInput] = useState('');
-  const [promoApplied, setPromoApplied] = useState(false);
+  const [promoInput, setPromoInput] = useState(promoCode ?? '');
+  const [promoApplied, setPromoApplied] = useState(Boolean(promoCode));
+
+  useEffect(() => {
+    if (promoCode) {
+      setPromoInput(promoCode);
+      setPromoApplied(true);
+    } else {
+      setPromoApplied(false);
+    }
+  }, [promoCode]);
 
   const subtotal = selections.reduce(
     (sum, sel) => sum + sel.pricePerTicket * sel.quantity,

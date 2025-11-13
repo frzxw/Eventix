@@ -17,13 +17,6 @@
 
 import { HttpRequest, HttpResponseInit, InvocationContext } from "@azure/functions";
 
-interface ApiResponse<T> {
-  success: boolean;
-  data?: T;
-  error?: string;
-  message?: string;
-}
-
 type RouteHandler = (req: HttpRequest, context: InvocationContext) => Promise<HttpResponseInit>;
 type RouteHandlersMap = Record<string, RouteHandler>;
 
@@ -53,6 +46,16 @@ import {
   transferTicketHandler,
   downloadTicketPdfHandler,
 } from "./handlers/tickets";
+import {
+  attemptHoldHandler,
+  extendHoldHandler,
+} from "./handlers/holds";
+import {
+  joinQueueHandler,
+  queueClaimHandler,
+  queueLeaveHandler,
+  queueStatusHandler,
+} from "./handlers/queue";
 
 // Route handlers map
 const routeHandlers: RouteHandlersMap = {
@@ -80,6 +83,14 @@ const routeHandlers: RouteHandlersMap = {
   "GET /api/tickets/my-tickets": adaptHandler(myTicketsHandler),
   "POST /api/tickets/:id/transfer": adaptHandler(transferTicketHandler),
   "GET /api/tickets/:id/download": adaptHandler(downloadTicketPdfHandler),
+
+  // Holds & Queue
+  "POST /api/holds": adaptHandler(attemptHoldHandler),
+  "POST /api/holds/extend": adaptHandler(extendHoldHandler),
+  "POST /api/queue/join": adaptHandler(joinQueueHandler),
+  "GET /api/queue/status/:queueId": adaptHandler(queueStatusHandler),
+  "POST /api/queue/leave/:queueId": adaptHandler(queueLeaveHandler),
+  "POST /api/queue/claim": adaptHandler(queueClaimHandler),
 };
 
 /**

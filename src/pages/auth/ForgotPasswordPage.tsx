@@ -96,7 +96,7 @@ export function ForgotPasswordPage() {
                 Forgot Password?
               </h1>
               <p className="text-[var(--text-secondary)]">
-                No worries, we'll send you reset instructions
+                No worries, we&rsquo;ll send you reset instructions
               </p>
             </div>
 
@@ -159,7 +159,7 @@ export function ForgotPasswordPage() {
                 Check Your Email
               </h1>
               <p className="text-[var(--text-secondary)]">
-                We've sent password reset instructions to
+                We&rsquo;ve sent password reset instructions to
               </p>
               <p className="text-[var(--text-primary)] mt-1" style={{ fontWeight: 'var(--font-weight-medium)' }}>
                 {email}
@@ -171,7 +171,7 @@ export function ForgotPasswordPage() {
                 {/* Instructions */}
                 <div className="p-4 rounded-2xl bg-[var(--surface-glass)] border border-[var(--border-default)]">
                   <h3 className="text-sm mb-3" style={{ fontWeight: 'var(--font-weight-medium)' }}>
-                    What's next?
+                    What&rsquo;s next?
                   </h3>
                   <ol className="space-y-2 text-sm text-[var(--text-secondary)]">
                     <li className="flex gap-2">
@@ -192,7 +192,7 @@ export function ForgotPasswordPage() {
                 {/* Resend */}
                 <div className="text-center">
                   <p className="text-sm text-[var(--text-secondary)] mb-3">
-                    Didn't receive the email?
+                    Didn&rsquo;t receive the email?
                   </p>
                   <Button
                     variant="outline"

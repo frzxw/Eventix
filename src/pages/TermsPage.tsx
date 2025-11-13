@@ -94,7 +94,7 @@ export function TermsPage() {
               <h2 className="mb-4">3. Ticket Delivery and Access</h2>
               <p className="text-[var(--text-secondary)] leading-relaxed mb-4">
                 Digital tickets will be delivered to the email address provided during purchase and will be
-                available in your account under "My Tickets". It is your responsibility to ensure the email
+                available in your account under &ldquo;My Tickets&rdquo;. It is your responsibility to ensure the email
                 address provided is correct.
               </p>
               <p className="text-[var(--text-secondary)] leading-relaxed">
@@ -120,7 +120,7 @@ export function TermsPage() {
               <p className="text-[var(--text-secondary)] leading-relaxed">
                 If an event is rescheduled, your tickets will remain valid for the new date. If you cannot
                 attend the rescheduled event, you may be eligible for a refund according to the event
-                organizer's policy.
+                organizer&rsquo;s policy.
               </p>
             </section>
 

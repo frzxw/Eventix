@@ -41,7 +41,7 @@ export function NotFoundPage() {
         >
           <h1 className="mb-4">Page Not Found</h1>
           <p className="text-[var(--text-secondary)] mb-8 max-w-md mx-auto">
-            Oops! The page you're looking for doesn't exist. It might have been moved or deleted, or you
+            Oops! The page you&rsquo;re looking for doesn&rsquo;t exist. It might have been moved or deleted, or you
             may have mistyped the URL.
           </p>
         </motion.div>

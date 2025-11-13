@@ -1,9 +1,11 @@
+/// <reference types="vitest" />
 
-  import { defineConfig } from 'vite';
-  import react from '@vitejs/plugin-react-swc';
-  import path from 'path';
+import { defineConfig, type UserConfig } from 'vite';
+import react from '@vitejs/plugin-react-swc';
+import path from 'path';
+import type { InlineConfig as VitestConfig } from 'vitest';
 
-  export default defineConfig({
+const config: UserConfig & { test: VitestConfig } = {
     plugins: [react()],
     define: {
       // Allow access to import.meta.env
@@ -66,4 +68,15 @@
       port: 3000,
       open: true,
     },
-  });
+    test: {
+      globals: true,
+      environment: 'jsdom',
+      setupFiles: [],
+      css: false,
+      coverage: {
+        reporter: ['text', 'html'],
+      },
+    },
+  };
+
+export default defineConfig(config);

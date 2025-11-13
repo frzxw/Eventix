@@ -11,6 +11,7 @@ param holdExpirationScanLimit int = 100
 param idempotencyTtlSeconds int = 900
 param rateLimitMax int = 300
 param rateLimitWindow string = 'PT1M'
+param webPubSubSku string = 'Standard_S1'
 @secure()
 param postgresAdminUser string = 'eventix_admin'
 @secure()
@@ -36,6 +37,7 @@ var containerRegistryLoginServer = '${containerRegistryName}.azurecr.io'
 var apiContainerAppName = '${projectName}-api-ca-${environment}'
 var finalizerContainerAppName = '${projectName}-finalizer-${environment}'
 var holdCleanerJobName = '${projectName}-hold-cleaner-${environment}'
+var webPubSubName = '${projectName}-wps-${environment}'
 var keyVaultInitialPolicies = deployerObjectId == '' ? [] : [
   {
     tenantId: subscription().tenantId
@@ -221,6 +223,26 @@ resource serviceBusConnectionSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-0
   }
 }
 
+// ==================== Azure Web PubSub ====================
+resource webPubSub 'Microsoft.SignalRService/webPubSub@2023-06-01-preview' = {
+  name: webPubSubName
+  location: location
+  sku: {
+    name: webPubSubSku
+  }
+  properties: {
+    publicNetworkAccess: 'Enabled'
+    disableLocalAuth: false
+  }
+}
+
+resource webPubSubConnectionSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
+  name: '${keyVault.name}/webpubsub-connection-string'
+  properties: {
+    value: listKeys(webPubSub.id, '2023-06-01-preview').primaryConnectionString
+  }
+}
+
 resource redisPrimaryKeySecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
   name: '${keyVault.name}/redis-primary-key'
   properties: {
@@ -321,6 +343,10 @@ resource apiContainerApp 'Microsoft.App/containerApps@2023-05-01' = {
           name: 'application-insights-connection'
           value: appInsights.properties.ConnectionString
         }
+        {
+          name: 'webpubsub-connection'
+          value: format('@Microsoft.KeyVault(VaultName={0};SecretName=webpubsub-connection-string)', keyVault.name)
+        }
       ]
     }
     template: {
@@ -396,6 +422,14 @@ resource apiContainerApp 'Microsoft.App/containerApps@2023-05-01' = {
             {
               name: 'RATE_LIMIT_WINDOW'
               value: rateLimitWindow
+            }
+            {
+              name: 'WEBPUBSUB_CONNECTION_STRING'
+              secretRef: 'webpubsub-connection'
+            }
+            {
+              name: 'WEBPUBSUB_HUB_NAME'
+              value: 'booking'
             }
           ]
         }
@@ -826,3 +860,4 @@ output containerAppsEnvironmentId string = containerAppsEnv.id
 output apiContainerAppName string = apiContainerApp.name
 output finalizerContainerAppName string = finalizerContainerApp.name
 output holdCleanerJobNameOutput string = holdCleanerJob.name
+output webPubSubResourceName string = webPubSub.name

@@ -3,12 +3,11 @@ import { Button } from '../ui/button';
 import { forwardRef, type ComponentProps, type ReactNode } from 'react';
 
 export interface AnimatedButtonProps extends ComponentProps<typeof Button> {
-  ripple?: boolean;
   children?: ReactNode;
 }
 
 export const AnimatedButton = forwardRef<HTMLButtonElement, AnimatedButtonProps>(
-  ({ children, ripple = true, ...props }, ref) => {
+  ({ children, ...props }, ref) => {
     return (
       <motion.div
         whileHover={{ scale: 1.05 }}

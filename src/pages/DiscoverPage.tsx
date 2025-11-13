@@ -18,7 +18,7 @@ import {
 import { EventGridSkeleton } from '../components/loading';
 import type { Event, EventCategory } from '../lib/types';
 import { StatusNotice } from '../components/common/StatusNotice';
-import { useEventsQuery } from '@/lib/hooks/useEvents';
+import { useEventsQuery, type EventsListResponse } from '@/lib/hooks/useEvents';
 
 const MAX_PRICE = 10000000;
 const EVENT_CATEGORIES: EventCategory[] = ['concert', 'festival', 'theater', 'comedy', 'sports', 'other'];
@@ -121,7 +121,7 @@ export function DiscoverPage() {
     sort: 'date',
   });
 
-  const fallbackData = useMemo(() => {
+  const fallbackData: EventsListResponse | null = useMemo(() => {
     if (!eventsQuery.isError) {
       return null;
     }
@@ -130,11 +130,12 @@ export function DiscoverPage() {
     return {
       events: paginated,
       total: filtered.length,
+      page: currentPage,
       totalPages: Math.max(Math.ceil(filtered.length / eventsPerPage), 1),
     };
   }, [eventsQuery.isError, filters, searchQuery, currentPage]);
 
-  const events = eventsQuery.data?.events ?? fallbackData?.events ?? [];
+  const events: Event[] = eventsQuery.data?.events ?? fallbackData?.events ?? [];
   const totalEvents = eventsQuery.data?.total ?? fallbackData?.total ?? 0;
   const totalPages = eventsQuery.data?.totalPages ?? fallbackData?.totalPages ?? 1;
   const isLoading = eventsQuery.isPending;

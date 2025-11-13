@@ -262,3 +262,24 @@ export function getTicketHoldExpiry(minutes: number = 10): Date {
 export function formatNumber(num: number, locale: string = 'id-ID'): string {
   return new Intl.NumberFormat(locale).format(num);
 }
+
+/**
+ * Format seconds into human-readable duration (e.g. 5m 30s)
+ */
+export function formatSecondsToDuration(totalSeconds: number): string {
+  const safeSeconds = Math.max(0, Math.floor(totalSeconds));
+  const minutes = Math.floor(safeSeconds / 60);
+  const seconds = safeSeconds % 60;
+
+  if (minutes >= 60) {
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+    return `${hours}h ${remainingMinutes}m`;
+  }
+
+  if (minutes > 0) {
+    return `${minutes}m ${seconds}s`;
+  }
+
+  return `${seconds}s`;
+}

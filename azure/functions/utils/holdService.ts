@@ -49,6 +49,14 @@ export type HoldClaimResult = {
   expiresAtEpoch?: number;
 };
 
+export type HoldExtendResult = {
+  success: boolean;
+  holdToken?: string;
+  holdExpiresAt?: string;
+  reason?: string;
+  status?: string;
+};
+
 async function ensureScriptsLoaded(): Promise<void> {
   if (!acquireHoldSha) {
     acquireHoldSha = await loadScript(ACQUIRE_HOLD_LUA);
@@ -227,5 +235,44 @@ export async function getHold(holdToken: string): Promise<{ entries: HoldEntry[]
     entries: JSON.parse(response[0]) as HoldEntry[],
     status: response[1] as string,
     expiresAtEpoch: response[2] ? Number(response[2]) : 0,
+  };
+}
+
+export async function extendHold(holdToken: string, extendSeconds?: number): Promise<HoldExtendResult> {
+  const holdKey = buildHoldKey(holdToken);
+  const exists = await redis.exists(holdKey);
+  if (!exists) {
+    return { success: false, reason: 'HOLD_NOT_FOUND' };
+  }
+
+  const status = await redis.hget(holdKey, 'status');
+  if (status !== 'held' && status !== 'checkout_pending') {
+    return { success: false, reason: 'HOLD_NOT_ACTIVE', status: status ?? undefined };
+  }
+
+  const ttlSeconds = Math.max(30, extendSeconds ?? HOLD_TTL_SECONDS);
+  const newExpiry = new Date(Date.now() + ttlSeconds * 1000);
+  const expiresIso = newExpiry.toISOString();
+  const expiresEpoch = Math.floor(newExpiry.getTime() / 1000);
+
+  await redis
+    .multi()
+    .hset(
+      holdKey,
+      'expiresAt',
+      expiresIso,
+      'expiresAtEpoch',
+      expiresEpoch.toString(),
+      'extendedAt',
+      new Date().toISOString()
+    )
+    .expire(holdKey, ttlSeconds)
+    .zadd(HOLD_EXPIRATION_ZSET_KEY, expiresEpoch, holdToken)
+    .exec();
+
+  return {
+    success: true,
+    holdToken,
+    holdExpiresAt: expiresIso,
   };
 }

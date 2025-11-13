@@ -16,9 +16,8 @@ export function HomePage() {
   const featuredQuery = useFeaturedEventsQuery();
   const eventsQuery = useEventsQuery({ limit: 12, page: 1, sort: 'date' });
 
-  const featuredEvents: Event[] = featuredQuery.data && featuredQuery.data.length > 0
-    ? featuredQuery.data
-    : getFeaturedEvents();
+  const remoteFeatured = featuredQuery.data ?? [];
+  const featuredEvents: Event[] = remoteFeatured.length > 0 ? remoteFeatured : getFeaturedEvents();
 
   const allEvents: Event[] = eventsQuery.isError
     ? mockEvents

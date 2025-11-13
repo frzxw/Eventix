@@ -53,6 +53,24 @@ const apiBaseUrl = (import.meta as any).env?.VITE_API_URL
   || (import.meta as any).env?.VITE_API_BASE_URL
   || 'http://localhost:7071/api';
 const apiTimeoutMs = (import.meta as any).env?.VITE_API_TIMEOUT_MS || '30000';
+const holdApiUrl = (import.meta as any).env?.VITE_HOLD_API_URL
+  || (import.meta as any).env?.VITE_QUEUE_HOLD_URL
+  || `${apiBaseUrl}/holds`;
+const queueApiUrl = (import.meta as any).env?.VITE_QUEUE_API_URL
+  || (import.meta as any).env?.VITE_QUEUE_BASE_URL
+  || `${apiBaseUrl}/queue`;
+const realtimeServiceUrl = (import.meta as any).env?.VITE_REALTIME_URL
+  || (import.meta as any).env?.VITE_QUEUE_REALTIME_URL
+  || '';
+const realtimeTransport = (import.meta as any).env?.VITE_REALTIME_TRANSPORT
+  || (import.meta as any).env?.VITE_QUEUE_REALTIME_TRANSPORT
+  || 'webpubsub';
+const realtimeHubName = (import.meta as any).env?.VITE_REALTIME_HUB
+  || (import.meta as any).env?.VITE_QUEUE_REALTIME_HUB
+  || 'booking';
+const queuePollInterval = parseInt((import.meta as any).env?.VITE_QUEUE_POLL_INTERVAL_MS || '5000', 10);
+const queueMaxPollInterval = parseInt((import.meta as any).env?.VITE_QUEUE_MAX_POLL_INTERVAL_MS || '15000', 10);
+const queueRetryLimit = parseInt((import.meta as any).env?.VITE_QUEUE_RETRY_LIMIT || '5', 10);
 
 export const API = {
   BASE_URL: apiBaseUrl,
@@ -61,6 +79,17 @@ export const API = {
   RETRY_DELAY_MS: 1000,
   CIRCUIT_BREAKER_THRESHOLD: 5,
   CIRCUIT_BREAKER_TIMEOUT_MS: 60000,
+} as const;
+
+export const BOOKING_QUEUE = {
+  HOLD_API_URL: holdApiUrl,
+  QUEUE_API_URL: queueApiUrl,
+  REALTIME_URL: realtimeServiceUrl,
+  REALTIME_TRANSPORT: realtimeTransport,
+  REALTIME_HUB: realtimeHubName,
+  POLL_INTERVAL_MS: queuePollInterval,
+  MAX_POLL_INTERVAL_MS: queueMaxPollInterval,
+  RETRY_LIMIT: queueRetryLimit,
 } as const;
 
 // Azure Storage Configuration

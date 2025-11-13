@@ -47,7 +47,9 @@ function safeSetItem(storage: Storage | null, key: string, value: string | null)
     } else {
       storage.setItem(key, value);
     }
-  } catch {}
+  } catch (error) {
+    console.warn('Failed to access browser storage', { key, error });
+  }
 }
 
 function detectTokenStorage(): StoragePreference | null {
@@ -121,7 +123,9 @@ export function getStoredUser(): AuthStoredUser | null {
     if (parsed && typeof parsed === 'object' && typeof parsed.id === 'string') {
       return parsed as AuthStoredUser;
     }
-  } catch {}
+  } catch (error) {
+    console.warn('Failed to parse stored user from browser storage', { error });
+  }
   return null;
 }
 

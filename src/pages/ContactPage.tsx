@@ -83,7 +83,7 @@ export function ContactPage() {
           </div>
           <h1 className="mb-4">Contact Us</h1>
           <p className="text-[var(--text-secondary)] max-w-2xl mx-auto">
-            Have questions or need assistance? We're here to help! Reach out to our support team and we'll get
+            Have questions or need assistance? We&rsquo;re here to help! Reach out to our support team and we&rsquo;ll get
             back to you as soon as possible.
           </p>
         </motion.div>
@@ -143,7 +143,7 @@ export function ContactPage() {
                     </div>
                     <h2 className="mb-3">Message Sent!</h2>
                     <p className="text-[var(--text-secondary)]">
-                      Thank you for contacting us. We'll respond to your inquiry within 24 hours.
+                      Thank you for contacting us. We&rsquo;ll respond to your inquiry within 24 hours.
                     </p>
                   </motion.div>
                 ) : (
@@ -151,7 +151,7 @@ export function ContactPage() {
                     <div>
                       <h2 className="mb-2">Send us a Message</h2>
                       <p className="text-sm text-[var(--text-secondary)]">
-                        Fill out the form below and we'll get back to you as soon as possible
+                        Fill out the form below and we&rsquo;ll get back to you as soon as possible
                       </p>
                     </div>
 

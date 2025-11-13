@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { Button } from '../ui/button';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
 
 interface PromoBanner {

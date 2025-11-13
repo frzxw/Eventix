@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'motion/react';
-import { User, Mail, Phone, ChevronRight, ChevronLeft, Users, AlertCircle } from 'lucide-react';
+import { User, Mail, ChevronRight, ChevronLeft, Users, AlertCircle } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -8,12 +8,19 @@ import { PhoneInput } from '../ui/phone-input';
 import type { Event } from '../../lib/types';
 import type { TicketSelection } from './BookingStep1';
 import { formatCurrency } from '../../lib/utils';
+import { HoldBadge } from './HoldBadge';
 
 interface BookingStep2Props {
   event: Event;
   selections: TicketSelection[];
   onContinue: (attendeeInfo: AttendeeInfo) => void;
   onBack: () => void;
+  holdInfo?: {
+    holdId?: string;
+    holdExpiresAt?: string;
+    onExtend?: () => Promise<void> | void;
+    isExtending?: boolean;
+  };
 }
 
 export interface AttendeeInfo {
@@ -27,7 +34,7 @@ export interface AttendeeInfo {
   }[];
 }
 
-export function BookingStep2({ event, selections, onContinue, onBack }: BookingStep2Props) {
+export function BookingStep2({ event, selections, onContinue, onBack, holdInfo }: BookingStep2Props) {
   const totalTickets = selections.reduce((sum, sel) => sum + sel.quantity, 0);
   const totalAmount = selections.reduce((sum, sel) => sum + sel.pricePerTicket * sel.quantity, 0);
 
@@ -103,6 +110,19 @@ export function BookingStep2({ event, selections, onContinue, onBack }: BookingS
           <p className="text-[var(--text-secondary)] text-lg">
             Please provide details for all attendees
           </p>
+          <p className="text-sm text-[var(--text-tertiary)] mt-2">
+            Booking for {event.title} at {event.venue.name}, {event.venue.city}
+          </p>
+          {holdInfo?.holdId && holdInfo.holdExpiresAt && (
+            <div className="mt-6">
+              <HoldBadge
+                holdId={holdInfo.holdId}
+                expiresAt={holdInfo.holdExpiresAt}
+                onExtend={holdInfo.onExtend}
+                isExtending={holdInfo.isExtending}
+              />
+            </div>
+          )}
         </div>
 
         {/* Order Summary Card */}
@@ -155,7 +175,7 @@ export function BookingStep2({ event, selections, onContinue, onBack }: BookingS
               <h3 className="text-lg" style={{ fontWeight: 'var(--font-weight-medium)' }}>
                 Primary Attendee
               </h3>
-              <p className="text-sm text-[var(--text-tertiary)]">This is who we'll contact about the order</p>
+              <p className="text-sm text-[var(--text-tertiary)]">This is who we&rsquo;ll contact about the order</p>
             </div>
           </div>
 

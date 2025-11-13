@@ -140,7 +140,7 @@ export function parseQRCodeData(
       timestamp: parsedTimestamp,
       isValid: true,
     };
-  } catch (error) {
+  } catch {
     return null;
   }
 }

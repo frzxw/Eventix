@@ -219,7 +219,7 @@ function mapTicketCategory(category: any) {
   };
 }
 
-function derivePricing(ticketCategories: any[], event: any) {
+function derivePricing(ticketCategories: any[], _event: any) {
   if (ticketCategories.length === 0) {
     return {
       min: 0,

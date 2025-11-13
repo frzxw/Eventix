@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { BookingStep1, type TicketSelection } from '../components/booking/BookingStep1';
 import { BookingStep2, type AttendeeInfo } from '../components/booking/BookingStep2';
-import { BookingStep3 } from '../components/booking/BookingStep3';
+import { BookingStep3, type PaymentMethod } from '../components/booking/BookingStep3';
 import { EventDetailSkeleton } from '../components/loading';
 import { useEvent } from '../lib/hooks/useEvent';
 
@@ -27,7 +27,7 @@ export function SelectTicketsPage() {
           Event Not Found
         </h1>
         <p className="text-[var(--text-secondary)] mb-6">
-          {error ?? "The event you're looking for doesn't exist."}
+          {error ?? 'The event you&rsquo;re looking for doesn&rsquo;t exist.'}
         </p>
         <button
           onClick={() => navigate('/')}
@@ -69,6 +69,11 @@ export function SelectTicketsPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const handleCheckout = async (_paymentMethod: PaymentMethod) => {
+    console.warn('Checkout flow is not available on SelectTicketsPage');
+    return { success: false, error: 'Checkout is not available in this flow. Please use the main checkout.' };
+  };
+
   return (
     <>
       {currentStep === 1 && (
@@ -93,6 +98,7 @@ export function SelectTicketsPage() {
           attendeeInfo={attendeeInfo}
           onComplete={handleComplete}
           onBack={handleBackToStep2}
+          onCheckout={handleCheckout}
         />
       )}
     </>

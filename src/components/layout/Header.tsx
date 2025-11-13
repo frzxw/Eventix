@@ -1,4 +1,4 @@
-import { Search, Menu, User, Ticket, X } from 'lucide-react';
+import { Search, Menu, User, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Button } from '../ui/button';
 import { useState } from 'react';

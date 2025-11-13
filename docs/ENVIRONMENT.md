@@ -17,6 +17,8 @@ Key fields:
 
 - `VITE_API_URL` (primary)
 - `VITE_API_BASE_URL` (legacy fallback) — keep in sync with `VITE_API_URL`
+- `VITE_HOLD_API_URL`, `VITE_QUEUE_API_URL` (Azure Container Apps queue endpoints)
+- `VITE_REALTIME_URL`, `VITE_REALTIME_HUB` (Azure Web PubSub client endpoint + hub name)
 
 2) Functions (local)
 
@@ -51,6 +53,8 @@ Frontend (Vite):
 
 - `VITE_API_URL` (preferred)
 - `VITE_API_BASE_URL` (fallback)
+- `VITE_HOLD_API_URL`, `VITE_QUEUE_API_URL`
+- `VITE_REALTIME_URL`, `VITE_REALTIME_HUB`, `VITE_QUEUE_POLL_INTERVAL_MS`, `VITE_QUEUE_MAX_POLL_INTERVAL_MS`
 - `VITE_APPINSIGHTS_CONNECTION_STRING`, `VITE_APPINSIGHTS_INSTRUMENTATION_KEY`
 - `VITE_STORAGE_*` (for resolving asset/CDN URLs)
 - Feature flags: `VITE_ENABLE_*`, `VITE_ENVIRONMENT`, etc.

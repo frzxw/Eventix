@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { 
   CreditCard, 
@@ -24,6 +23,7 @@ import type { TicketSelection } from './BookingStep1';
 import type { AttendeeInfo } from './BookingStep2';
 import { formatCurrency } from '../../lib/utils';
 import { toast } from 'sonner';
+import { HoldBadge } from './HoldBadge';
 
 interface BookingStep3Props {
   event: Event;
@@ -31,12 +31,28 @@ interface BookingStep3Props {
   attendeeInfo: AttendeeInfo;
   onComplete: (orderId: string) => void;
   onBack: () => void;
+  onCheckout: (paymentMethod: PaymentMethod) => Promise<{ success: boolean; orderId?: string; error?: string }>;
+  isCheckoutPending?: boolean;
+  holdInfo?: {
+    holdId?: string;
+    holdExpiresAt?: string;
+    onExtend?: () => Promise<void> | void;
+    isExtending?: boolean;
+  };
 }
 
-type PaymentMethod = 'credit-card' | 'bank-transfer' | 'e-wallet';
+export type PaymentMethod = 'credit-card' | 'bank-transfer' | 'e-wallet';
 
-export function BookingStep3({ event, selections, attendeeInfo, onComplete, onBack }: BookingStep3Props) {
-  const navigate = useNavigate();
+export function BookingStep3({
+  event,
+  selections,
+  attendeeInfo,
+  onComplete,
+  onBack,
+  onCheckout,
+  isCheckoutPending,
+  holdInfo,
+}: BookingStep3Props) {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('credit-card');
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -53,40 +69,18 @@ export function BookingStep3({ event, selections, attendeeInfo, onComplete, onBa
     }
 
     setIsProcessing(true);
-    // Prepare order details for confirmation page
-    const orderId = `ORD-${Date.now()}`;
     try {
-      const totalAmount = selections.reduce((sum, selection) => {
-        const category = event.ticketCategories.find((cat) => cat.id === selection.categoryId);
-        return sum + (category ? category.price * selection.quantity : 0);
-      }, 0) + serviceFee; // include service fee to match displayed total
-
-      const orderDetails = {
-        orderId,
-        eventTitle: event.title,
-        eventDate: event.date,
-        eventTime: event.time,
-        venueName: event.venue.name,
-        venueCity: event.venue.city,
-        tickets: selections.map((selection) => {
-          const category = event.ticketCategories.find((cat) => cat.id === selection.categoryId);
-          return {
-            category: category?.name || '',
-            quantity: selection.quantity,
-            price: category?.price || 0,
-          };
-        }),
-        totalAmount,
-        email: attendeeInfo.email,
-        confirmationSentAt: new Date().toISOString(),
-      };
-
-      localStorage.setItem('lastOrder', JSON.stringify(orderDetails));
-
-      // Redirect to mock payment page to simulate gateway then confirmation
-      navigate(`/payment/mock?orderId=${encodeURIComponent(orderId)}&amount=${encodeURIComponent(total.toFixed(0))}`);
-    } catch (e) {
-      toast.error('Failed to prepare order. Please try again.');
+      const result = await onCheckout(paymentMethod);
+      if (result.success && result.orderId) {
+        onComplete(result.orderId);
+        setIsProcessing(false);
+      } else {
+        toast.error(result.error ?? 'Checkout failed. Please try again.');
+        setIsProcessing(false);
+      }
+    } catch (error) {
+      console.error('Checkout error:', error);
+      toast.error('Failed to complete checkout. Please try again.');
       setIsProcessing(false);
     }
   };
@@ -134,6 +128,16 @@ export function BookingStep3({ event, selections, attendeeInfo, onComplete, onBa
           <p className="text-[var(--text-secondary)] text-lg">
             Choose your payment method and confirm your order
           </p>
+          {holdInfo?.holdId && holdInfo.holdExpiresAt && (
+            <div className="mt-6">
+              <HoldBadge
+                holdId={holdInfo.holdId}
+                expiresAt={holdInfo.holdExpiresAt}
+                onExtend={holdInfo.onExtend}
+                isExtending={holdInfo.isExtending}
+              />
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -251,7 +255,7 @@ export function BookingStep3({ event, selections, attendeeInfo, onComplete, onBa
                       Payment Instructions
                     </p>
                     <p className="text-[var(--text-secondary)]">
-                      After clicking "Confirm Payment", you'll receive bank account details via email. 
+                      After clicking &ldquo;Confirm Payment&rdquo;, you&rsquo;ll receive bank account details via email. 
                       Please complete the transfer within 24 hours to secure your tickets.
                     </p>
                   </div>
@@ -344,6 +348,11 @@ export function BookingStep3({ event, selections, attendeeInfo, onComplete, onBa
                     <span>{totalTickets} {totalTickets === 1 ? 'Ticket' : 'Tickets'}</span>
                   </div>
                 </div>
+                <div className="mt-4 text-sm text-[var(--text-secondary)]">
+                  <p className="uppercase tracking-wide mb-1" style={{ fontWeight: 'var(--font-weight-medium)' }}>Primary Contact</p>
+                  <p>{attendeeInfo.firstName} {attendeeInfo.lastName}</p>
+                  <p className="opacity-80">{attendeeInfo.email}</p>
+                </div>
               </div>
 
               {/* Ticket Breakdown */}
@@ -428,10 +437,10 @@ export function BookingStep3({ event, selections, attendeeInfo, onComplete, onBa
                   <Button
                     size="lg"
                     onClick={handlePayment}
-                    disabled={!agreedToTerms || isProcessing}
+                    disabled={!agreedToTerms || isProcessing || isCheckoutPending}
                     className="w-full sm:w-auto bg-gradient-to-r from-[var(--primary-500)] to-[var(--accent-500)] hover:opacity-90 transition-all duration-300 text-white shadow-xl shadow-[var(--primary-500)]/20 rounded-full px-8 disabled:opacity-50"
                   >
-                    {isProcessing ? (
+                    {isProcessing || isCheckoutPending ? (
                       <>
                         <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
                         Processing...

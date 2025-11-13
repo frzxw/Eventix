@@ -20,17 +20,8 @@
  */
 
 import { API } from "@/lib/constants";
+import { clearTokens, getAccessToken, getRefreshToken, setTokens } from "@/lib/auth";
 import type { Event } from "@/lib/types";
-
-type ApiResponse<T> = {
-  success: boolean;
-  data?: T;
-  error?: string;
-  message?: string;
-  total?: number;
-  page?: number;
-  totalPages?: number;
-};
 
 const API_BASE_URL = API.BASE_URL.replace(/\/$/, "");
 
@@ -47,9 +38,6 @@ async function request<T>(
   } = {}
 ): Promise<{ data?: T; error?: string }> {
   try {
-    // Lazy imports to avoid circular deps
-    const { getAccessToken, getRefreshToken, setTokens, clearTokens } = await import("@/lib/auth");
-
     const accessToken = getAccessToken();
 
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
@@ -64,7 +52,11 @@ async function request<T>(
 
     // Attempt to parse JSON safely
     let result: any = null;
-    try { result = await response.json(); } catch {}
+    try {
+      result = await response.json();
+    } catch {
+      result = null;
+    }
 
     // Handle unauthorized: try refresh once, then retry original request
     if (response.status === 401 && endpoint !== "/auth/refresh-token" && !(options._retry)) {
@@ -190,10 +182,21 @@ export const bookings = {
       country: string;
     };
     promoCode?: string;
+    holdToken?: string;
+    payment?: {
+      method: string;
+    };
+  }, options?: {
+    idempotencyKey?: string;
+    correlationId?: string;
   }): Promise<{ data?: any; error?: string }> {
     return request("/orders/create", {
       method: "POST",
       body: data,
+      headers: {
+        ...(options?.idempotencyKey ? { 'Idempotency-Key': options.idempotencyKey } : {}),
+        ...(options?.correlationId ? { 'x-correlation-id': options.correlationId } : {}),
+      },
     });
   },
 

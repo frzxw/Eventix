@@ -10,6 +10,8 @@ interface BookingStep1Props {
   event: Event;
   onContinue: (selections: TicketSelection[]) => void;
   onBack: () => void;
+  isProcessing?: boolean;
+  errorMessage?: string;
 }
 
 export interface TicketSelection {
@@ -20,7 +22,7 @@ export interface TicketSelection {
   pricePerTicket: number;
 }
 
-export function BookingStep1({ event, onContinue, onBack }: BookingStep1Props) {
+export function BookingStep1({ event, onContinue, onBack, isProcessing, errorMessage }: BookingStep1Props) {
   const [selections, setSelections] = useState<Map<string, number>>(new Map());
 
   const updateQuantity = (categoryId: string, delta: number) => {
@@ -53,6 +55,9 @@ export function BookingStep1({ event, onContinue, onBack }: BookingStep1Props) {
         });
       }
     });
+    if (ticketSelections.length === 0) {
+      return;
+    }
     onContinue(ticketSelections);
   };
 
@@ -163,12 +168,27 @@ export function BookingStep1({ event, onContinue, onBack }: BookingStep1Props) {
                   <Button
                     size="lg"
                     onClick={handleContinue}
+                    disabled={Boolean(isProcessing)}
                     className="w-full sm:w-auto bg-gradient-to-r from-[var(--primary-500)] to-[var(--accent-500)] hover:opacity-90 transition-all duration-300 text-white shadow-xl shadow-[var(--primary-500)]/20 rounded-full px-8"
                   >
-                    Continue to Details
-                    <ChevronRight className="w-5 h-5 ml-2" />
+                    {isProcessing ? (
+                      <>
+                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" aria-hidden="true" />
+                        Securing hold...
+                      </>
+                    ) : (
+                      <>
+                        Continue to Details
+                        <ChevronRight className="w-5 h-5 ml-2" />
+                      </>
+                    )}
                   </Button>
                 </div>
+                {errorMessage && (
+                  <p className="mt-3 text-xs text-[var(--error)]" aria-live="polite">
+                    {errorMessage}
+                  </p>
+                )}
               </div>
             </div>
           </div>
